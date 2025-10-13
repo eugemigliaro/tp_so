@@ -23,3 +23,5 @@
 
 # zip files
 *.zip
+
+.idea
