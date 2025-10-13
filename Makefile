@@ -1,11 +1,13 @@
 
+MEMORY_MANAGER ?= mymalloc
+
 all:  bootloader kernel userland image
 
 bootloader:
 	cd Bootloader; make all
 
 kernel:
-	cd Kernel; make all
+	cd Kernel; make all MEMORY_MANAGER=$(MEMORY_MANAGER)
 
 userland:
 	cd Userland; make all
@@ -20,4 +22,7 @@ clean:
 	cd Userland; make clean
 	rm -f *.zip
 
-.PHONY: bootloader image collections kernel userland all clean
+buddy:
+	$(MAKE) all MEMORY_MANAGER=buddy
+
+.PHONY: bootloader image collections kernel userland all clean buddy

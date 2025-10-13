@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <sys.h>
 #include <exceptions.h>
+#include "test_mm.h"
 
 #ifdef ANSI_4_BIT_COLOR_SUPPORT
     #include <ansiColors.h>
@@ -33,6 +35,7 @@ int man(void);
 int snake(void);
 int regs(void);
 int time(void);
+int test_mm_command(void);
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode);
 static void printNextCommand(enum REGISTERABLE_KEYS scancode);
@@ -58,6 +61,7 @@ Command commands[] = {
     { .name = "regs",           .function = (int (*)(void))(unsigned long long)regs,            .description = "Prints the register snapshot, if any" },
     { .name = "man",            .function = (int (*)(void))(unsigned long long)man,             .description = "Prints the description of the provided command" },
     { .name = "snake",          .function = (int (*)(void))(unsigned long long)snake,           .description = "Launches the snake game" },
+    { .name = "test_mm",        .function = (int (*)(void))(unsigned long long)test_mm_command, .description = "Stress tests dynamic memory with random allocations" },
     { .name = "time",           .function = (int (*)(void))(unsigned long long)time,            .description = "Prints the current time" },
 };
 
@@ -281,4 +285,24 @@ int regs(void) {
 
 int snake(void) {
     return exec(snakeModuleAddress);
+}
+
+int test_mm_command(void) {
+    char *arg = strtok(NULL, " ");
+
+    if (arg == NULL) {
+        fprintf(FD_STDERR, "Usage: test_mm <max_bytes>\n");
+        return -1;
+    }
+
+    char *endptr = NULL;
+    long value = strtol(arg, &endptr, 10);
+
+    if (endptr == arg || *endptr != '\0' || value <= 0 || value > (long)UINT32_MAX) {
+        fprintf(FD_STDERR, "test_mm: invalid size '%s'\n", arg);
+        return -1;
+    }
+
+    printf("Running memory stress test up to %ld bytes (Ctrl+C to stop)\n", value);
+    return run_mm_test((uint32_t)value);
 }

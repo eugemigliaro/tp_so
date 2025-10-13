@@ -10,6 +10,17 @@ LOADERSRC=loader.asm
 
 LOADEROBJECT=$(LOADERSRC:.asm=.o)
 STATICLIBS=
+MEMORY_MANAGER ?= mymalloc
+
+ifeq ($(MEMORY_MANAGER),buddy)
+SOURCES += ./memory/buddy.c
+GCCFLAGS += -DMEMORY_MANAGER_BUDDY
+else ifeq ($(MEMORY_MANAGER),mymalloc)
+SOURCES += ./memory/myMalloc.c
+GCCFLAGS += -DMEMORY_MANAGER_MYMALLOC
+else
+$(error Unknown MEMORY_MANAGER "$(MEMORY_MANAGER)")
+endif
 
 all: $(KERNEL)
 
