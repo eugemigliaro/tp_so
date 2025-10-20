@@ -119,19 +119,17 @@ static BuddyNode *acquire_node(BuddyNode *node, int order) {
 
 static void coalesce_up(BuddyNode *node) {
     while (node != NULL) {
-        if (node->left == NULL || node->right == NULL) {
+        if (node->left != NULL && node->right != NULL) {
+            if (node->left->state == NODE_FREE && node->right->state == NODE_FREE) {
+                node->state = NODE_FREE;
+                node = node->parent;
+            } else {
+                node->state = NODE_SPLIT;
+                node = NULL;
+            }
+        } else {
             node = node->parent;
-            continue;
         }
-
-        if (node->left->state == NODE_FREE && node->right->state == NODE_FREE) {
-            node->state = NODE_FREE;
-            node = node->parent;
-            continue;
-        }
-
-        node->state = NODE_SPLIT;
-        break;
     }
 }
 

@@ -47,7 +47,9 @@ void *mem_alloc(size_t size) {
 
 
 void mem_free(void *ptr) {
-    if (!ptr) return;
+    if (!ptr) {
+        return;
+    }
 
     Block *block = (Block *)((uint8_t *)ptr - BLOCK_SIZE);
     block->free = 1;
