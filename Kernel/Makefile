@@ -1,7 +1,9 @@
 include Makefile.inc
 
-KERNEL=kernel.bin
-SOURCES=$(wildcard *.c ./drivers/*.c ./idt/*.c)
+KERNEL_BIN=kernel.bin
+KERNEL_ELF=kernel.elf
+KERNEL=$(KERNEL_BIN)
+SOURCES=$(wildcard *.c ./drivers/*.c ./idt/*.c ./collections/*.c ./process/*.c)
 SOURCES_ASM=$(wildcard asm/*.asm)
 HOT_OBJECTS=./drivers/video.o fonts.o # Compiled with -O3
 OBJECTS=$(SOURCES:.c=.o)
@@ -10,22 +12,25 @@ LOADERSRC=loader.asm
 
 LOADEROBJECT=$(LOADERSRC:.asm=.o)
 STATICLIBS=
-MEMORY_MANAGER ?= mymalloc
+MEMORY_MANAGER ?= buddy
 
 ifeq ($(MEMORY_MANAGER),buddy)
-SOURCES += ./memory/buddy.c
+SOURCES += ./mmu/buddy.c
 GCCFLAGS += -DMEMORY_MANAGER_BUDDY
 else ifeq ($(MEMORY_MANAGER),mymalloc)
-SOURCES += ./memory/myMalloc.c
+SOURCES += ./mmu/myMalloc.c
 GCCFLAGS += -DMEMORY_MANAGER_MYMALLOC
 else
 $(error Unknown MEMORY_MANAGER "$(MEMORY_MANAGER)")
 endif
 
-all: $(KERNEL)
+all: $(KERNEL_BIN) $(KERNEL_ELF)
 
-$(KERNEL): $(LOADEROBJECT) $(OBJECTS) $(STATICLIBS) $(OBJECTS_ASM)
-	$(LD) $(LDFLAGS) -T kernel.ld -o $(KERNEL) $(LOADEROBJECT) $(OBJECTS) $(OBJECTS_ASM) $(STATICLIBS)
+$(KERNEL_ELF): $(LOADEROBJECT) $(OBJECTS) $(STATICLIBS) $(OBJECTS_ASM)
+	$(LD) $(LDFLAGS) -T kernel.ld -o $@ $(LOADEROBJECT) $(OBJECTS) $(OBJECTS_ASM) $(STATICLIBS)
+
+$(KERNEL_BIN): $(KERNEL_ELF)
+	$(OBJCOPY) -O binary $< $@
 
 $(HOT_OBJECTS) : %.o: %.c
 	$(GCC) -O3 $(GCCFLAGS) -I./include -c $< -o $@
@@ -43,6 +48,6 @@ $(LOADEROBJECT):
 	$(ASM) $(ASMFLAGS) $(LOADERSRC) -o $(LOADEROBJECT)
 
 clean:
-	rm -rf */*.o *.o *.bin
+	rm -rf */*.o *.o *.bin *.elf
 
 .PHONY: all clean

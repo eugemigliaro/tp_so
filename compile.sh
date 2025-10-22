@@ -22,7 +22,7 @@ if [ ! "$(docker ps -a | grep "$CONTAINER_NAME")" ]; then
     echo "Creating container..."
     # Note: ${PWD}:/root. Using another container to compile might fail as the compiled files would not be guaranteed to be at $PWD
     # Always use TPE-ARQ to compile
-    docker run -d -v ${PWD}:/root --security-opt seccomp:unconfined -it --name "$CONTAINER_NAME" agodio/itba-so:2.0
+docker run -d -v ${PWD}:/root --security-opt seccomp:unconfined -it --name "$CONTAINER_NAME" agodio/itba-so:2.0
     echo "${GREEN}Container $CONTAINER_NAME created.${NC}"
 else
     echo "${GREEN}Container $CONTAINER_NAME exists.${NC}"
@@ -33,9 +33,12 @@ docker start "$CONTAINER_NAME" &> /dev/null
 echo "${GREEN}Container $CONTAINER_NAME started.${NC}"
 
 # Compiles
-docker exec -it "$CONTAINER_NAME" make clean -C /root/ && \
-docker exec -it "$CONTAINER_NAME" make all -C /root/Toolchain && \
-docker exec -it "$CONTAINER_NAME" make all -C /root/
+HOST_UID=$(id -u)
+HOST_GID=$(id -g)
+
+docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make clean -C /root/ && \
+docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make all -C /root/Toolchain && \
+docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make all -C /root/
 
 
 if [ $? -ne 0 ]; then
