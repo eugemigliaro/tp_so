@@ -1,129 +1,117 @@
+#include <stddef.h>
 #include <scheduler.h>
+#include <queueADT.h>
+#include <interrupts.h>
 
 typedef struct scheduler_state {
-    process_queue_t ready_queue;
     pcb_t *current;
-    pcb_t *idle;
-    int initialized;
-    int need_reschedule;
-    uint8_t base_quantum;
     scheduler_metrics_t metrics;
+    queue_t *ready_queues[SCHEDULER_PRIORITY_LEVELS];
+    pcb_t *idle;
 } scheduler_state_t;
 
-static scheduler_state_t scheduler_state;
+static scheduler_state_t scheduler = {0};
 
-static void mark_running(pcb_t *pcb) {
-    if (pcb == NULL) {
-        return;
+static void idle_process_entry(void) {
+    while (1) {
+        _hlt();
     }
-    pcb_set_state(pcb, PROCESS_STATE_RUNNING);
 }
 
-static void mark_ready(pcb_t *pcb) {
-    if (pcb == NULL) {
-        return;
+static size_t priority_index(uint8_t priority) {
+    if (priority < SCHEDULER_MAX_PRIORITY) {
+        priority = SCHEDULER_MAX_PRIORITY;
+    } else if (priority > SCHEDULER_MIN_PRIORITY) {
+        priority = SCHEDULER_MIN_PRIORITY;
     }
-    pcb_set_state(pcb, PROCESS_STATE_READY);
+    return priority - SCHEDULER_MAX_PRIORITY;
+}
+
+static queue_t *queue_for_priority(uint8_t priority) {
+    size_t index = priority_index(priority);
+    queue_t *queue = scheduler.ready_queues[index];
+    if (queue == NULL) {
+        queue = queue_create();
+        scheduler.ready_queues[index] = queue;
+    }
+    return queue;
 }
 
 void scheduler_init(void) {
-    process_queue_init(&scheduler_state.ready_queue);
-    scheduler_state.current = NULL;
-    scheduler_state.idle = NULL;
-    scheduler_state.initialized = 1;
-    scheduler_state.need_reschedule = 0;
-    scheduler_state.base_quantum = SCHEDULER_DEFAULT_QUANTUM;
-    scheduler_state.metrics.total_ticks = 0;
-    scheduler_state.metrics.context_switches = 0;
+    for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
+        queue_t *queue = queue_create();
+        scheduler.ready_queues[i] = queue;
+    }
+
+    scheduler.idle = createProcess("idle", 0, SCHEDULER_MIN_PRIORITY, idle_process_entry);
 }
 
-int scheduler_is_initialized(void) {
-    return scheduler_state.initialized;
-}
-
-void scheduler_set_idle_process(pcb_t *idle) {
-    scheduler_state.idle = idle;
+void scheduler_add_ready(pcb_t *pcb) {
+    if (pcb == NULL) {
+        return;
+    }
+    pcb->state = PROCESS_STATE_READY;
+    queue_push(queue_for_priority(pcb->priority), pcb);
 }
 
 pcb_t *scheduler_current(void) {
-    return scheduler_state.current;
+    return scheduler.current;
 }
 
-void scheduler_set_current(pcb_t *pcb) {
-    if (!scheduler_state.initialized) {
-        return;
+
+void *schedule_tick(void *current_rsp) {
+    scheduler.metrics.total_ticks++;
+
+    pcb_t *running = scheduler.current;
+    if (running != NULL) {
+        running->context.rsp = (uint64_t)current_rsp;
+        scheduler_add_ready(running);
     }
 
-    if (scheduler_state.current != pcb) {
-        scheduler_state.metrics.context_switches++;
+    for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
+        queue_t *queue = queue_for_priority(priority);
+        pcb_t *next = queue_pop(queue);
+        if (next != NULL) {
+            if (next == scheduler.idle) {
+                scheduler.idle->state = PROCESS_STATE_READY;
+                continue;
+            }
+            scheduler.current = next;
+            scheduler.current->state = PROCESS_STATE_RUNNING;
+            scheduler.metrics.context_switches++;
+            return (void *)next->context.rsp;
+        }
     }
 
-    scheduler_state.current = pcb;
-    scheduler_state.need_reschedule = 0;
-
-    if (pcb != NULL) {
-        mark_running(pcb);
+    if (scheduler.idle != NULL) {
+        scheduler.idle->context.rsp = (uint64_t)current_rsp;
+        scheduler.idle->state = PROCESS_STATE_RUNNING;
+        scheduler.current = scheduler.idle;
+        return (void *)scheduler.idle->context.rsp;
     }
+
+    return current_rsp;
 }
 
-void scheduler_enqueue_ready(pcb_t *pcb) {
-    if (!scheduler_state.initialized || pcb == NULL) {
-        return;
-    }
-    mark_ready(pcb);
-    process_queue_push(&scheduler_state.ready_queue, pcb);
-}
 
-void scheduler_enqueue_ready_front(pcb_t *pcb) {
-    if (!scheduler_state.initialized || pcb == NULL) {
-        return;
-    }
-    mark_ready(pcb);
-    process_queue_push_front(&scheduler_state.ready_queue, pcb);
-}
-
-pcb_t *scheduler_pick_next(void) {
-    if (!scheduler_state.initialized) {
-        return NULL;
-    }
-
-    pcb_t *next = process_queue_pop(&scheduler_state.ready_queue);
-    if (next == NULL) {
-        next = scheduler_state.idle;
-    }
-    return next;
-}
-
-int scheduler_has_ready(void) {
-    if (!scheduler_state.initialized) {
-        return 0;
-    }
-    return !process_queue_is_empty(&scheduler_state.ready_queue);
-}
-
-void scheduler_on_tick(void) {
-    if (!scheduler_state.initialized) {
-        return;
-    }
-    scheduler_state.metrics.total_ticks++;
-}
-
-int scheduler_needs_reschedule(void) {
-    if (!scheduler_state.initialized) {
-        return 0;
-    }
-    return scheduler_state.need_reschedule;
-}
-
-void scheduler_ack_reschedule(void) {
-    scheduler_state.need_reschedule = 0;
-}
-
-uint64_t *scheduler_handle_timer_interrupt(uint64_t *stack_frame) {
-    (void)stack_frame;
-    return stack_frame;
-}
 
 const scheduler_metrics_t *scheduler_get_metrics(void) {
-    return &scheduler_state.metrics;
+    return &scheduler.metrics;
+}
+void scheduler_for_each_ready(scheduler_iter_cb callback, void *context) {
+    if (callback == NULL) {
+        return;
+    }
+
+    for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
+        queue_t *queue = queue_for_priority(priority);
+        if (queue_is_empty(queue)) {
+            continue;
+        }
+        queue_iterator_t it = queue_iter(queue);
+        while (queue_iter_has_next(&it)) {
+            pcb_t *pcb = queue_iter_next(&it);
+            callback(pcb, context);
+        }
+    }
 }

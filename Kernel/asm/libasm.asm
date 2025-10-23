@@ -10,6 +10,7 @@ GLOBAL setPITFrequency
 GLOBAL setSpeaker
 
 GLOBAL getRegisterSnapshot
+GLOBAL stackInit
 
 EXTERN register_snapshot
 EXTERN register_snapshot_taken
@@ -118,4 +119,46 @@ setSpeaker:
 	.end:
 	mov rsp, rbp
 	pop rbp
+	ret
+
+stackInit:
+
+	;of interest:
+	;rdx -> rsp
+	;rcx -> rip
+
+	push rbp
+	mov rbp, rsp
+	
+	mov rsp, rdi	;placed at the stack's top
+	push 0x0 ; SS
+	push rdx ; RSP
+	push 0x202 ;RFLAGS
+	push 0x8  ; CS
+	push rcx ; RIP
+	
+	;GPR
+	;ABI calling convention
+	;rdi -> argc
+	;rsi -> argv
+	push rax 
+	push rbx
+	push rcx
+	push rdx
+	push rbp
+	push rdi
+	push rsi
+	push r8
+	push r9
+	push r10
+	push r11
+	push r12
+	push r13
+	push r14
+	push r15
+
+	mov rax, rsp
+	mov rsp, rbp
+	pop rbp
+	
 	ret

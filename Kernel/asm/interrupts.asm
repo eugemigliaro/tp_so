@@ -20,6 +20,7 @@ EXTERN irqDispatcher
 EXTERN syscallDispatcher
 EXTERN exceptionDispatcher
 EXTERN getStackBase
+EXTERN schedule_tick
 
 SECTION .text
 
@@ -161,7 +162,20 @@ picSlaveMask:
 
 ; 8254 Timer (Timer Tick)
 _irq00Handler:
-	irqHandlerMaster 0
+    pushState
+
+	mov rdi, 0 ; pass argument to irqDispatcher
+	call irqDispatcher
+
+    mov rdi, rsp              ; arg: current stack frame pointer
+    call schedule_tick        ; returns next stack in rax
+    mov rsp, rax              ; switch to chosen process stack
+
+    mov al, 20h               ; PIC EOI
+    out 20h, al
+
+    popState
+    iretq
 
 ; Keyboard
 _irq01Handler:

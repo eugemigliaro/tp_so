@@ -2,32 +2,26 @@
 #define KERNEL_SCHEDULER_H
 
 #include <process.h>
+#include <stdbool.h>
 
 #define SCHEDULER_DEFAULT_QUANTUM 4
+#define SCHEDULER_MAX_PRIORITY 0
+#define SCHEDULER_MIN_PRIORITY 5
+#define SCHEDULER_PRIORITY_LEVELS (SCHEDULER_MIN_PRIORITY - SCHEDULER_MAX_PRIORITY + 1)
 
 typedef struct scheduler_metrics {
     uint64_t total_ticks;
     uint64_t context_switches;
 } scheduler_metrics_t;
 
+typedef void (*scheduler_iter_cb)(pcb_t *pcb, void *context);
+
 void scheduler_init(void);
-int scheduler_is_initialized(void);
-
-void scheduler_set_idle_process(pcb_t *idle);
-
+void scheduler_add_ready(pcb_t *pcb);
 pcb_t *scheduler_current(void);
-void scheduler_set_current(pcb_t *pcb);
-
-void scheduler_enqueue_ready(pcb_t *pcb);
-void scheduler_enqueue_ready_front(pcb_t *pcb);
-pcb_t *scheduler_pick_next(void);
-int scheduler_has_ready(void);
-
-void scheduler_on_tick(void);
-int scheduler_needs_reschedule(void);
-void scheduler_ack_reschedule(void);
-uint64_t *scheduler_handle_timer_interrupt(uint64_t *stack_frame);
-
+void *schedule_tick(void *current_rsp);
 const scheduler_metrics_t *scheduler_get_metrics(void);
+
+void scheduler_for_each_ready(scheduler_iter_cb callback, void *context);
 
 #endif

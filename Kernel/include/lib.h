@@ -17,4 +17,6 @@ uint8_t getSecond(void);
 uint8_t getMinute(void);
 uint8_t getHour(void);
 
+uint64_t stackInit(void *stack_top, uint64_t unused, void *process_rsp, void (*entry_point)(void));
+
 #endif

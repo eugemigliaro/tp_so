@@ -1,229 +1,94 @@
 #include <process.h>
+#include <memoryManager.h>
+#include <strings.h>
 #include <lib.h>
 
-static inline uint8_t normalize_priority(uint8_t priority) {
-    if (priority < PROCESS_PRIORITY_MIN) {
-        return PROCESS_PRIORITY_MIN;
+static uint64_t next_pid = 1;
+static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
+
+void process_table_init(void) {
+    for (size_t i = 0; i < PROCESS_MAX_PROCESSES; ++i) {
+        pcb_table[i] = NULL;
     }
-    if (priority > PROCESS_PRIORITY_MAX) {
-        return PROCESS_PRIORITY_MAX;
-    }
-    return priority;
+    next_pid = 1;
 }
 
-uint8_t process_priority_clamp(uint8_t priority) {
-    return normalize_priority(priority);
-}
-
-int process_priority_valid(uint8_t priority) {
-    return priority >= PROCESS_PRIORITY_MIN && priority <= PROCESS_PRIORITY_MAX;
-}
-
-void process_queue_init(process_queue_t *queue) {
-    if (queue == NULL) {
-        return;
-    }
-
-    for (uint8_t i = 0; i < PROCESS_PRIORITY_LEVELS; i++) {
-        list_init(&queue->levels[i]);
-    }
-    queue->process_count = 0;
-}
-
-static inline void queue_attach(process_queue_t *queue, pcb_t *pcb, void (*push_fn)(list_t *, list_node_t *)) {
-    if (queue == NULL || pcb == NULL || push_fn == NULL) {
-        return;
-    }
-
-    if (pcb->current_queue != NULL) {
-        process_queue_remove(NULL, pcb);
-    }
-
-    pcb->priority = normalize_priority(pcb->priority);
-    list_t *level = &queue->levels[pcb->priority];
-    push_fn(level, &pcb->sched_node);
-    pcb->current_queue = queue;
-    queue->process_count++;
-}
-
-void process_queue_push(process_queue_t *queue, pcb_t *pcb) {
-    queue_attach(queue, pcb, list_push_back);
-}
-
-void process_queue_push_front(process_queue_t *queue, pcb_t *pcb) {
-    queue_attach(queue, pcb, list_push_front);
-}
-
-static pcb_t *queue_pop_from_level(process_queue_t *queue, uint8_t priority) {
-    if (queue == NULL || !process_priority_valid(priority)) {
+pcb_t *process_lookup(uint64_t pid) {
+    if (pid == 0 || pid >= PROCESS_MAX_PROCESSES) {
         return NULL;
     }
-
-    list_t *level = &queue->levels[priority];
-    list_node_t *node = list_pop_front(level);
-    if (node == NULL) {
-        return NULL;
-    }
-
-    pcb_t *pcb = LIST_ENTRY(node, pcb_t, sched_node);
-    if (queue->process_count > 0) {
-        queue->process_count--;
-    }
-    pcb->current_queue = NULL;
-    return pcb;
+    return pcb_table[pid];
 }
 
-pcb_t *process_queue_pop_priority(process_queue_t *queue, uint8_t priority) {
-    return queue_pop_from_level(queue, priority);
-}
-
-pcb_t *process_queue_pop(process_queue_t *queue) {
-    if (queue == NULL) {
-        return NULL;
-    }
-
-    for (uint8_t priority = PROCESS_PRIORITY_MIN; priority <= PROCESS_PRIORITY_MAX; priority++) {
-        pcb_t *pcb = queue_pop_from_level(queue, priority);
-        if (pcb != NULL) {
-            return pcb;
-        }
-    }
-    return NULL;
-}
-
-static pcb_t *queue_peek_from_level(const process_queue_t *queue, uint8_t priority) {
-    if (queue == NULL || !process_priority_valid(priority)) {
-        return NULL;
-    }
-
-    list_node_t *node = list_peek_front(&queue->levels[priority]);
-    if (node == NULL) {
-        return NULL;
-    }
-    return LIST_ENTRY(node, pcb_t, sched_node);
-}
-
-pcb_t *process_queue_peek_priority(const process_queue_t *queue, uint8_t priority) {
-    return queue_peek_from_level(queue, priority);
-}
-
-pcb_t *process_queue_peek(const process_queue_t *queue) {
-    if (queue == NULL) {
-        return NULL;
-    }
-
-    for (uint8_t priority = PROCESS_PRIORITY_MIN; priority <= PROCESS_PRIORITY_MAX; priority++) {
-        pcb_t *pcb = queue_peek_from_level(queue, priority);
-        if (pcb != NULL) {
-            return pcb;
-        }
-    }
-    return NULL;
-}
-
-void process_queue_remove(process_queue_t *queue, pcb_t *pcb) {
-    if (pcb == NULL || pcb->current_queue == NULL) {
-        return;
-    }
-
-    process_queue_t *owner = pcb->current_queue;
-    if (queue != NULL && queue != owner) {
-        return;
-    }
-
-    if (list_node_is_linked(&pcb->sched_node)) {
-        list_remove(&pcb->sched_node);
-        if (owner->process_count > 0) {
-            owner->process_count--;
-        }
-    }
-    pcb->current_queue = NULL;
-}
-
-int process_queue_is_empty(const process_queue_t *queue) {
-    return queue == NULL || queue->process_count == 0;
-}
-
-size_t process_queue_size(const process_queue_t *queue) {
-    return queue == NULL ? 0 : queue->process_count;
-}
-
-void pcb_init(pcb_t *pcb,
-              uint64_t pid,
-              const char *name,
-              void *entry_point,
-              void *stack_base,
-              void *stack_top,
-              uint8_t priority,
-              process_foreground_t foreground) {
+bool process_register(pcb_t *pcb) {
     if (pcb == NULL) {
+        return false;
+    }
+    if (pcb->pid == 0 || pcb->pid >= PROCESS_MAX_PROCESSES) {
+        return false;
+    }
+    pcb_table[pcb->pid] = pcb;
+    return true;
+}
+
+void process_unregister(uint64_t pid) {
+    if (pid == 0 || pid >= PROCESS_MAX_PROCESSES) {
         return;
     }
+    pcb_table[pid] = NULL;
+}
 
-    memset(pcb, 0, sizeof(*pcb));
-    list_init(&pcb->children);
-    list_node_init(&pcb->sched_node);
-    list_node_init(&pcb->sibling_node);
+static uint64_t allocate_pid(void) {
+    if (next_pid >= PROCESS_MAX_PROCESSES) {
+        return 0;
+    }
+    return next_pid++;
+}
+
+pcb_t *createProcess(const char *name, uint64_t ppid, uint8_t priority, void (*entry_point)(void)) {
+    if (entry_point == NULL) {
+        return NULL;
+    }
+
+    uint64_t pid = allocate_pid();
+    if (pid == 0) {
+        return NULL;
+    }
+
+    pcb_t *pcb = mem_alloc(sizeof(pcb_t));
+    if (pcb == NULL) {
+        return NULL;
+    }
+
+    void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
+    if (stack_base == NULL) {
+        mem_free(pcb);
+        return NULL;
+    }
+
+    void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE;
+    uint64_t prepared_rsp = stackInit(stack_top, 0, stack_top, entry_point);
 
     pcb->pid = pid;
-    pcb->ppid = 0;
-    pcb->name = name;
-    pcb->entry_point = entry_point;
+    pcb->ppid = ppid;
+    pcb->priority = priority;
+    pcb->state = PROCESS_STATE_READY;
+    pcb->last_ticks_used = 0;
+    pcb->last_quantum = 0;
+    pcb->context.rsp = prepared_rsp;
     pcb->stack_base = stack_base;
-    pcb->stack_top = stack_top;
-    pcb->priority = normalize_priority(priority);
-    pcb->foreground = foreground;
-    pcb->state = PROCESS_STATE_NEW;
-    pcb->ticks_remaining = 0;
-    pcb->quantum_ticks = 0;
-    pcb->exit_code = 0;
-    pcb->parent = NULL;
-    pcb->current_queue = NULL;
 
-    pcb_reset_context(pcb);
-}
-
-void pcb_reset_context(pcb_t *pcb) {
-    if (pcb == NULL) {
-        return;
-    }
-    memset(&pcb->context, 0, sizeof(cpu_context_t));
-}
-
-void pcb_set_priority(pcb_t *pcb, uint8_t priority) {
-    if (pcb == NULL) {
-        return;
+    if (name == NULL) {
+        pcb->name[0] = '\0';
+    } else {
+        strcpy(pcb->name, name);
     }
 
-    pcb->priority = normalize_priority(priority);
-}
-
-void pcb_set_state(pcb_t *pcb, process_state_t state) {
-    if (pcb == NULL) {
-        return;
-    }
-    pcb->state = state;
-}
-
-void pcb_attach_child(pcb_t *parent, pcb_t *child) {
-    if (parent == NULL || child == NULL) {
-        return;
+    if (!process_register(pcb)) {
+        mem_free(pcb);
+        mem_free(stack_base);
+        return NULL;
     }
 
-    pcb_detach_child(child);
-    child->parent = parent;
-    child->ppid = parent->pid;
-    list_push_back(&parent->children, &child->sibling_node);
-}
-
-void pcb_detach_child(pcb_t *child) {
-    if (child == NULL) {
-        return;
-    }
-
-    if (list_node_is_linked(&child->sibling_node)) {
-        list_remove(&child->sibling_node);
-    }
-    child->parent = NULL;
-    child->ppid = 0;
+    return pcb;
 }
