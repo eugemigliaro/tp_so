@@ -1,7 +1,9 @@
 #include <stddef.h>
 #include <scheduler.h>
+#include <stdbool.h>
 #include <queueADT.h>
 #include <interrupts.h>
+#include <memoryManager.h>
 
 typedef struct scheduler_state {
     pcb_t *current;
@@ -37,13 +39,33 @@ static queue_t *queue_for_priority(uint8_t priority) {
     return queue;
 }
 
+static uint8_t priority_from_usage(uint8_t ticks_used) {
+    if (ticks_used > SCHEDULER_DEFAULT_QUANTUM) {
+        ticks_used = SCHEDULER_DEFAULT_QUANTUM;
+    }
+
+    const uint8_t levels = SCHEDULER_PRIORITY_LEVELS;
+    const uint32_t scaled_usage = (uint32_t)ticks_used * levels;
+
+    for (uint8_t i = 0; i < levels; i++) {
+        uint32_t threshold = (uint32_t)SCHEDULER_DEFAULT_QUANTUM * (i + 1);
+        if (scaled_usage < threshold) {
+            return (uint8_t)(SCHEDULER_MAX_PRIORITY + i);
+        }
+    }
+
+    return (uint8_t)(SCHEDULER_MAX_PRIORITY + levels - 1);
+}
+
 void scheduler_init(void) {
     for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
         queue_t *queue = queue_create();
         scheduler.ready_queues[i] = queue;
     }
 
-    scheduler.idle = createProcess("idle", 0, SCHEDULER_MIN_PRIORITY, idle_process_entry);
+    char **argv_idle = mem_alloc(sizeof(char *));
+    argv_idle[0] = "idle";
+    scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, idle_process_entry);
 }
 
 void scheduler_add_ready(pcb_t *pcb) {
@@ -51,6 +73,11 @@ void scheduler_add_ready(pcb_t *pcb) {
         return;
     }
     pcb->state = PROCESS_STATE_READY;
+    if (pcb != scheduler.idle) {
+        pcb->priority = priority_from_usage(pcb->last_quantum_ticks);
+    }
+    pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+    pcb->last_quantum_ticks = 0;
     queue_push(queue_for_priority(pcb->priority), pcb);
 }
 
@@ -63,9 +90,29 @@ void *schedule_tick(void *current_rsp) {
     scheduler.metrics.total_ticks++;
 
     pcb_t *running = scheduler.current;
+    bool must_switch = true;
+
     if (running != NULL) {
         running->context.rsp = (uint64_t)current_rsp;
-        scheduler_add_ready(running);
+        if (running == scheduler.idle) {
+            // allow the idle task to yield every tick but still prefer real work
+            running->state = PROCESS_STATE_READY;
+        } else {
+            if (running->remaining_quantum > 1) {
+                running->remaining_quantum--;
+                running->last_quantum_ticks = (uint8_t)(SCHEDULER_DEFAULT_QUANTUM - running->remaining_quantum);
+                must_switch = false;
+            } else {
+                running->last_quantum_ticks = SCHEDULER_DEFAULT_QUANTUM;
+                scheduler_add_ready(running);
+                scheduler.current = NULL;
+                must_switch = true;
+            }
+        }
+    }
+
+    if (!must_switch) {
+        return current_rsp;
     }
 
     for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
@@ -78,6 +125,8 @@ void *schedule_tick(void *current_rsp) {
             }
             scheduler.current = next;
             scheduler.current->state = PROCESS_STATE_RUNNING;
+            scheduler.current->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+            scheduler.current->last_quantum_ticks = 0;
             scheduler.metrics.context_switches++;
             return (void *)next->context.rsp;
         }
@@ -86,6 +135,9 @@ void *schedule_tick(void *current_rsp) {
     if (scheduler.idle != NULL) {
         scheduler.idle->context.rsp = (uint64_t)current_rsp;
         scheduler.idle->state = PROCESS_STATE_RUNNING;
+        if (scheduler.current != scheduler.idle) {
+            scheduler.metrics.context_switches++;
+        }
         scheduler.current = scheduler.idle;
         return (void *)scheduler.idle->context.rsp;
     }

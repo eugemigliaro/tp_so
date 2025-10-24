@@ -2,6 +2,7 @@
 #include <memoryManager.h>
 #include <strings.h>
 #include <lib.h>
+#include <scheduler.h>
 
 static uint64_t next_pid = 1;
 static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
@@ -45,7 +46,7 @@ static uint64_t allocate_pid(void) {
     return next_pid++;
 }
 
-pcb_t *createProcess(const char *name, uint64_t ppid, uint8_t priority, void (*entry_point)(void)) {
+pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void)) {
     if (entry_point == NULL) {
         return NULL;
     }
@@ -66,23 +67,41 @@ pcb_t *createProcess(const char *name, uint64_t ppid, uint8_t priority, void (*e
         return NULL;
     }
 
-    void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE;
-    uint64_t prepared_rsp = stackInit(stack_top, 0, stack_top, entry_point);
+    void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE - sizeof(uint64_t);
+    uint64_t prepared_rsp = (uint64_t)stackInit(stack_top, (void *)entry_point, argc, argv);
 
     pcb->pid = pid;
     pcb->ppid = ppid;
     pcb->priority = priority;
     pcb->state = PROCESS_STATE_READY;
-    pcb->last_ticks_used = 0;
-    pcb->last_quantum = 0;
+    pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+    pcb->last_quantum_ticks = 0;
     pcb->context.rsp = prepared_rsp;
     pcb->stack_base = stack_base;
+    pcb->argc = argc;
+    pcb->argv = (char **)mem_alloc(sizeof(char *) * pcb->argc);
 
-    if (name == NULL) {
-        pcb->name[0] = '\0';
-    } else {
-        strcpy(pcb->name, name);
-    }
+	if (pcb->argv == NULL) {
+		// @todo: ENOMEM
+        mem_free(pcb);
+		return NULL;
+	}
+	for (int i = 0; i < pcb->argc; i++) {
+		// @todo: ENOMEM
+		pcb->argv[i] = (char *)mem_alloc(sizeof(char) * (strlen(argv[i]) + 1));
+		if (pcb->argv[i] == NULL) {
+			for (int j = 0; j < i; j++) {
+				mem_free(pcb->argv[j]);
+			}
+			mem_free(pcb->argv);
+			mem_free(pcb);
+			return NULL;
+		}
+		strcpy(pcb->argv[i], argv[i]);
+        pcb->argv[i][strlen(argv[i])] = '\0';
+	}
+
+    pcb->name = pcb->argv[0]; // Set process name to first argument
 
     if (!process_register(pcb)) {
         mem_free(pcb);

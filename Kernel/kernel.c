@@ -11,6 +11,7 @@
 #include <scheduler.h>
 #include <process.h>
 #include <interrupts.h>
+#include <time.h>
 
 // extern uint8_t text;
 // extern uint8_t rodata;
@@ -25,6 +26,8 @@ static void * const shellModuleAddress = (void *)0x400000;
 static void * const snakeModuleAddress = (void *)0x500000;
 
 typedef int (*EntryPoint)();
+
+static void process_that_prints_its_remaining_quantum(int argc, char **argv);
 
 void clearBSS(void * bssAddress, uint64_t bssSize){
 	memset(bssAddress, 0, bssSize);
@@ -62,11 +65,27 @@ int main(){
 	clear();
 	print("Launching shell process...\n");
  
-	pcb_t *shell_process = createProcess("shell", 0, SCHEDULER_MAX_PRIORITY, (void (*)(void))shellModuleAddress);
+	char **argv_shell = mem_alloc(sizeof(char *));
+	argv_shell[0] = "shell";
+	pcb_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, (void (*)(void))shellModuleAddress);
 	if (shell_process != NULL) {
 		scheduler_add_ready(shell_process);
 	} else {
 		print("Failed to create shell process\n");
+	}
+
+	print("Launching quantum printing process...\n");
+
+	char **argv_quantum = mem_alloc(2 * sizeof(char *));
+	argv_quantum[0] = "quantum";
+	char *quantum_arg = mem_alloc(sizeof(char) * 6);
+	strcpy(quantum_arg, "arg1");
+	argv_quantum[1] = quantum_arg;
+	pcb_t *quantum_printing_process = createProcess(2, argv_quantum, 2, SCHEDULER_MAX_PRIORITY, (void (*)(void))process_that_prints_its_remaining_quantum);
+	if (quantum_printing_process != NULL) {
+		scheduler_add_ready(quantum_printing_process);
+	} else {
+		print("Failed to create quantum printing process\n");
 	}
 
 	_sti();
@@ -78,4 +97,20 @@ int main(){
 	__builtin_unreachable();
 
 	return 0;
+}
+
+static void process_that_prints_its_remaining_quantum(int argc, char **argv) {
+	uint8_t counter = 0;
+	while(1){
+		counter = scheduler_current()->remaining_quantum;
+		setTextColor(0x00FF6666);
+		print("remaining quantum ticks: ");
+		printDec(counter);
+		print("\n");
+		print("First arg value: ");
+		print(argv[1]);
+		print("\n");
+		setTextColor(DEFAULT_TEXT_COLOR);
+		sleep(1);
+	}
 }

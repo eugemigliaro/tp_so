@@ -124,24 +124,26 @@ setSpeaker:
 stackInit:
 
 	;of interest:
-	;rdx -> rsp
-	;rcx -> rip
+	;rdi -> rsp
+	;rci -> rip
 
 	push rbp
 	mov rbp, rsp
 	
 	mov rsp, rdi	;placed at the stack's top
 	push 0x0 ; SS
-	push rdx ; RSP
+	push rdi ; RSP
 	push 0x202 ;RFLAGS
 	push 0x8  ; CS
-	push rcx ; RIP
+	push rsi ; RIP
+	mov rdi, rdx
+	mov rsi, rcx
 	
 	;GPR
 	;ABI calling convention
 	;rdi -> argc
 	;rsi -> argv
-	push rax 
+	push rax
 	push rbx
 	push rcx
 	push rdx
@@ -157,7 +159,8 @@ stackInit:
 	push r14
 	push r15
 
-	mov rax, rsp
+	lea rax, [rsp]
+
 	mov rsp, rbp
 	pop rbp
 	

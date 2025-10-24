@@ -7,7 +7,6 @@
 
 #define PROCESS_MAX_PROCESSES 32
 #define PROCESS_STACK_SIZE (4096 * 4)
-#define PROCESS_NAME_MAX 32
 
 typedef enum process_state {
     PROCESS_STATE_READY,
@@ -23,12 +22,14 @@ typedef struct context{
 typedef struct pcb {
     uint64_t pid;
     uint64_t ppid;
-    char name[PROCESS_NAME_MAX];
+    char *name;
+    int argc;
+    char **argv;
     process_state_t state;
     uint8_t priority;
     context_t context; //should this be a pointer?
-    uint8_t last_ticks_used;
-    uint8_t last_quantum;
+    uint8_t remaining_quantum;
+    uint8_t last_quantum_ticks;
     void *stack_base;
 } pcb_t;
 
@@ -37,6 +38,6 @@ pcb_t *process_lookup(uint64_t pid);
 bool process_register(pcb_t *pcb);
 void process_unregister(uint64_t pid);
 
-pcb_t *createProcess(const char *name, uint64_t ppid, uint8_t priority, void (*entry_point)(void));
+pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void));
 
 #endif
