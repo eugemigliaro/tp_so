@@ -7,7 +7,7 @@
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
 
 static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
-static int32_t running_pid = -1;
+static int32_t running_pid = -1;    // Only one running process at a time (unicore)
 
 void process_table_init(void) {
     for (size_t i = 0; i < PROCESS_MAX_PROCESSES; ++i) {
@@ -87,7 +87,22 @@ static uint64_t allocate_pid(void) {
     return 0; // No available PID
 }
 
-pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void)) {
+static const char *process_state_to_string(process_state_t state) {
+    switch (state) {
+        case PROCESS_STATE_READY:
+            return "ready";
+        case PROCESS_STATE_RUNNING:
+            return "running";
+        case PROCESS_STATE_BLOCKED:
+            return "blocked";
+        case PROCESS_STATE_TERMINATED:
+            return "terminated";
+        default:
+            return "unknown";
+    }
+}
+
+pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void (*entry_point)(void)) {
     if (entry_point == NULL) {
         return NULL;
     }
@@ -114,6 +129,7 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, voi
     pcb->pid = pid;
     pcb->ppid = ppid;
     pcb->priority = priority;
+    pcb->foreground = foreground;
     pcb->state = PROCESS_STATE_READY;
     pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     pcb->last_quantum_ticks = 0;
@@ -151,4 +167,63 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, voi
     }
 
     return pcb;
+}
+
+int32_t print_process_list(void) {
+    const int32_t current_pid = running_pid;
+    int32_t count = 0;
+
+    print("=== Process list ===\n");
+
+    for (uint64_t i = 0; i < PROCESS_MAX_PROCESSES; ++i) {
+        pcb_t *pcb = pcb_table[i];
+        if (pcb == NULL) {
+            continue;
+        }
+
+        const char *name = (pcb->name != NULL) ? pcb->name : "<unnamed>";
+
+        print("PID: ");
+        printDec(pcb->pid);
+        print(" | Name: ");
+        print(name);
+        print(" | PPID: ");
+        printDec(pcb->ppid);
+        newLine();
+
+        print("    State: ");
+        print(process_state_to_string(pcb->state));
+        print(" | Priority: ");
+        printDec(pcb->priority);
+        print(" | Foreground: ");
+        print(pcb->foreground ? "yes" : "no");
+        print(" | Running: ");
+        print(pcb->pid == (uint64_t)current_pid ? "yes" : "no");
+        newLine();
+
+        print("    Stack base: 0x");
+        printHex((uint64_t)pcb->stack_base);
+        print(" | Stack ptr: 0x");
+        printHex(pcb->context.rsp);
+        newLine();
+
+        print("    Remaining quantum: ");
+        printDec(pcb->remaining_quantum);
+        print(" | Last quantum ticks: ");
+        printDec(pcb->last_quantum_ticks);
+        newLine();
+
+        count++;
+        newLine();
+    }
+
+    if (count == 0) {
+        print("No processes found.\n");
+    } else {
+        print("Total processes: ");
+        printDec((uint64_t)count);
+        newLine();
+    }
+
+    return count;
 }

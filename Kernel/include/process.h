@@ -28,6 +28,7 @@ typedef struct pcb {
     char **argv;
     process_state_t state;
     uint8_t priority;
+    uint8_t foreground;
     context_t context; //should this be a pointer?
     uint8_t remaining_quantum;
     uint8_t last_quantum_ticks;
@@ -42,6 +43,7 @@ uint64_t get_next_pid(void);
 int32_t get_pid(void);
 void process_set_running(pcb_t *pcb);
 
-pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void));
+pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void (*entry_point)(void));
+int32_t print_process_list(void);
 
 #endif

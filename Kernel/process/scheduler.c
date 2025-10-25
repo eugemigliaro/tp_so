@@ -65,7 +65,7 @@ void scheduler_init(void) {
 
     char **argv_idle = mem_alloc(sizeof(char *));
     argv_idle[0] = "idle";
-    scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, idle_process_entry);
+    scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, 0, idle_process_entry);
 }
 
 void scheduler_add_ready(pcb_t *pcb) {

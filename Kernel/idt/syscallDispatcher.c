@@ -62,7 +62,7 @@ int32_t syscallDispatcher(Registers * registers) {
 		);
 		case 0x80000101: return sys_process_exit((int32_t) registers->rdi);
 		case 0x80000102: return sys_process_get_pid();
-		case 0x80000103: return sys_process_list((void *) registers->rdi, (uint64_t) registers->rsi);
+		case 0x80000103: return sys_process_list();
 		case 0x80000104: return sys_process_kill((uint64_t) registers->rdi);
 		case 0x80000105: return sys_process_set_priority((uint64_t) registers->rdi, (uint8_t) registers->rsi);
 		case 0x80000106: return sys_process_block((uint64_t) registers->rdi);
@@ -252,4 +252,8 @@ int32_t sys_get_character_without_display(void) {
 
 int32_t sys_process_get_pid(void) {
 	return get_pid();
+}
+
+int32_t sys_process_list(void) {
+	return print_process_list();
 }
