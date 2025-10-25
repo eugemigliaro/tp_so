@@ -51,6 +51,23 @@ int32_t syscallDispatcher(Registers * registers) {
 		case 0x800000E0: return sys_get_register_snapshot((int64_t *) registers->rdi);
 
 		case 0x800000F0: return sys_get_character_without_display();
+
+		case 0x80000100: return sys_process_create(
+			(void (*)(int, char **)) registers->rdi,
+			(int) registers->rsi,
+			(char **) registers->rdx,
+			(uint8_t) registers->rcx,
+			(uint8_t) registers->r8
+		);
+		case 0x80000101: return sys_process_exit((int32_t) registers->rdi);
+		case 0x80000102: return sys_process_get_pid();
+		case 0x80000103: return sys_process_list((void *) registers->rdi, (uint64_t) registers->rsi);
+		case 0x80000104: return sys_process_kill((uint64_t) registers->rdi);
+		case 0x80000105: return sys_process_set_priority((uint64_t) registers->rdi, (uint8_t) registers->rsi);
+		case 0x80000106: return sys_process_block((uint64_t) registers->rdi);
+		case 0x80000107: return sys_process_unblock((uint64_t) registers->rdi);
+		case 0x80000108: return sys_process_yield();
+		case 0x80000109: return sys_process_wait_children();
 		
 		default:
             return 0;
@@ -227,3 +244,7 @@ int32_t sys_get_register_snapshot(int64_t * registers) {
 int32_t sys_get_character_without_display(void) {
 	return getKeyboardCharacter(0);
 }
+
+// ==================================================================
+// Context Switch system calls
+// ==================================================================

@@ -68,4 +68,16 @@ int32_t sys_get_register_snapshot(int64_t * registers);
 // Get character without showing
 int32_t sys_get_character_without_display(void);
 
+// Process management syscalls
+int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground);
+int32_t sys_process_exit(int32_t status);
+int32_t sys_process_get_pid(void);
+int32_t sys_process_list(void *buffer, uint64_t capacity);
+int32_t sys_process_kill(uint64_t pid);
+int32_t sys_process_set_priority(uint64_t pid, uint8_t priority);
+int32_t sys_process_block(uint64_t pid);
+int32_t sys_process_unblock(uint64_t pid);
+int32_t sys_process_yield(void);
+int32_t sys_process_wait_children(void);
+
 #endif
