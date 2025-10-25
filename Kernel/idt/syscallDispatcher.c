@@ -261,3 +261,18 @@ int32_t sys_process_list(void) {
 int32_t sys_process_set_priority(uint64_t pid, uint8_t priority) {
 	return scheduler_set_process_priority(pid, priority);
 }
+
+int32_t sys_process_block(uint64_t pid) {
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        return -1;
+    }
+    return process_block(pcb) ? 0 : -1;
+}
+int32_t sys_process_unblock(uint64_t pid) {
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        return -1;
+    }
+    return process_unblock(pcb) ? 0 : -1;
+}
