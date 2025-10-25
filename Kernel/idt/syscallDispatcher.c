@@ -261,3 +261,12 @@ int32_t sys_process_list(void) {
 int32_t sys_process_set_priority(uint64_t pid, uint8_t priority) {
 	return scheduler_set_process_priority(pid, priority);
 }
+
+int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground) {
+	pcb_t *pcb = createProcess(argc, argv, (uint64_t)get_pid(), priority, foreground, entry_point);
+	if (pcb == NULL) {
+		return -1;
+	}
+	return (int32_t)pcb->pid;
+}
+
