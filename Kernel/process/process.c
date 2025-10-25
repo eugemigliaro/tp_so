@@ -93,6 +93,36 @@ bool process_unblock(pcb_t *pcb) {
     return true;
 }
 
+bool process_remove(pcb_t *pcb) {
+    if (pcb == NULL) {
+        return false;
+    }
+
+    scheduler_remove_ready(pcb);
+
+    if (scheduler_current() == pcb) {
+        process_set_running(NULL);
+    }
+
+    process_unregister(pcb->pid);
+
+    if (pcb->argv != NULL) {
+        for (int i = 0; i < pcb->argc; i++) {
+            if (pcb->argv[i] != NULL) {
+                mem_free(pcb->argv[i]);
+            }
+        }
+        mem_free(pcb->argv);
+    }
+
+    if (pcb->stack_base != NULL) {
+        mem_free(pcb->stack_base);
+    }
+
+    mem_free(pcb);
+    return true;
+}
+
 int32_t get_pid(void) {
     if (running_pid < PROCESS_FIRST_PID) {
 		return -1;
