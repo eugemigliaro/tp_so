@@ -81,6 +81,26 @@ void scheduler_add_ready(pcb_t *pcb) {
     queue_push(queue_for_priority(pcb->priority), pcb);
 }
 
+bool scheduler_remove_ready(pcb_t *pcb) {
+    if (pcb == NULL || pcb == scheduler.idle) {
+        return false;
+    }
+
+    queue_t *queue = queue_for_priority(pcb->priority);
+    if (queue != NULL && queue_remove(queue, pcb)) {
+        return true;
+    }
+
+    for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
+        queue_t *other_queue = scheduler.ready_queues[i];
+        if (other_queue != NULL && other_queue != queue && queue_remove(other_queue, pcb)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 pcb_t *scheduler_current(void) {
     return scheduler.current;
 }
