@@ -270,3 +270,18 @@ int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc,
 	return (int32_t)pcb->pid;
 }
 
+
+int32_t sys_process_block(uint64_t pid) {
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        return -1;
+    }
+    return process_block(pcb) ? 0 : -1;
+}
+int32_t sys_process_unblock(uint64_t pid) {
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        return -1;
+    }
+    return process_unblock(pcb) ? 0 : -1;
+}

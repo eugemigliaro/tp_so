@@ -67,6 +67,32 @@ void process_set_running(pcb_t *pcb) {
     running_pid = (int32_t)pcb->pid;
 }
 
+bool process_block(pcb_t *pcb) {
+    if (pcb == NULL) {
+        return false;
+    }
+
+    if (!scheduler_remove_ready(pcb)) {
+        return false;
+    }
+
+    pcb->state = PROCESS_STATE_BLOCKED;
+    return true;
+}
+
+bool process_unblock(pcb_t *pcb) {
+    if (pcb == NULL) {
+        return false;
+    }
+
+    if (pcb->state != PROCESS_STATE_BLOCKED) {
+        return false;
+    }
+
+    scheduler_add_ready(pcb);
+    return true;
+}
+
 int32_t get_pid(void) {
     if (running_pid < PROCESS_FIRST_PID) {
 		return -1;
