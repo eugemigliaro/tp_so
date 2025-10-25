@@ -6,6 +6,7 @@
 #include <lib.h>
 #include <video.h>
 #include <time.h>
+#include <process.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
@@ -248,3 +249,7 @@ int32_t sys_get_character_without_display(void) {
 // ==================================================================
 // Context Switch system calls
 // ==================================================================
+
+int32_t sys_process_get_pid(void) {
+	return get_pid();
+}

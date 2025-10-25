@@ -7,10 +7,21 @@
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
 
 static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
+static int32_t running_pid = -1;
+
+void process_table_init(void) {
+    for (size_t i = 0; i < PROCESS_MAX_PROCESSES; ++i) {
+        pcb_table[i] = NULL;
+    }
+    running_pid = -1;
+}
 
 pcb_t *process_lookup(uint64_t pid) {
+    if (pid < PROCESS_FIRST_PID) {
+        return NULL;
+    }
     uint64_t index = PID_TO_INDEX(pid);
-    if (index == 0 || index >= PROCESS_MAX_PROCESSES) {
+    if (index >= PROCESS_MAX_PROCESSES) {
         return NULL;
     }
     return pcb_table[index];
@@ -20,8 +31,11 @@ bool process_register(pcb_t *pcb) {
     if (pcb == NULL) {
         return false;
     }
+    if (pcb->pid < PROCESS_FIRST_PID) {
+        return false;
+    }
     uint64_t index = PID_TO_INDEX(pcb->pid);
-    if (index == 0 || index >= PROCESS_MAX_PROCESSES) {
+    if (index >= PROCESS_MAX_PROCESSES) {
         return false;
     }
     if (pcb_table[index] != NULL) {
@@ -32,11 +46,35 @@ bool process_register(pcb_t *pcb) {
 }
 
 void process_unregister(uint64_t pid) {
-    uint64_t index = PID_TO_INDEX(pid);
-    if (index == 0 || index >= PROCESS_MAX_PROCESSES) {
+    if (pid < PROCESS_FIRST_PID) {
         return;
     }
+    uint64_t index = PID_TO_INDEX(pid);
+    if (index >= PROCESS_MAX_PROCESSES) {
+        return;
+    }
+    if (pcb_table[index] != NULL && running_pid == (int32_t)pid) {
+        running_pid = -1;
+    }
     pcb_table[index] = NULL;
+}
+
+void process_set_running(pcb_t *pcb) {
+    if (pcb == NULL) {
+        running_pid = -1;
+        return;
+    }
+    running_pid = (int32_t)pcb->pid;
+}
+
+int32_t get_pid(void) {
+    if (running_pid < PROCESS_FIRST_PID) {
+		return -1;
+	}
+	if (running_pid >= (int32_t)(PROCESS_FIRST_PID + PROCESS_MAX_PROCESSES)) {
+		return -1;
+	}
+	return running_pid;
 }
 
 static uint64_t allocate_pid(void) {

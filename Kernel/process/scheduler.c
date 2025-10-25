@@ -106,12 +106,14 @@ void *schedule_tick(void *current_rsp) {
                 running->last_quantum_ticks = SCHEDULER_DEFAULT_QUANTUM;
                 scheduler_add_ready(running);
                 scheduler.current = NULL;
+                process_set_running(NULL);
                 must_switch = true;
             }
         }
     }
 
     if (!must_switch) {
+        process_set_running(scheduler.current);
         return current_rsp;
     }
 
@@ -128,6 +130,7 @@ void *schedule_tick(void *current_rsp) {
             scheduler.current->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
             scheduler.current->last_quantum_ticks = 0;
             scheduler.metrics.context_switches++;
+            process_set_running(scheduler.current);
             return (void *)next->context.rsp;
         }
     }
@@ -139,9 +142,11 @@ void *schedule_tick(void *current_rsp) {
             scheduler.metrics.context_switches++;
         }
         scheduler.current = scheduler.idle;
+        process_set_running(scheduler.idle);
         return (void *)scheduler.idle->context.rsp;
     }
 
+    process_set_running(NULL);
     return current_rsp;
 }
 

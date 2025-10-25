@@ -37,7 +37,10 @@ typedef struct pcb {
 pcb_t *process_lookup(uint64_t pid);
 bool process_register(pcb_t *pcb);
 void process_unregister(uint64_t pid);
+void process_table_init(void);
 uint64_t get_next_pid(void);
+int32_t get_pid(void);
+void process_set_running(pcb_t *pcb);
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void));
 
