@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define PROCESS_FIRST_PID 1
 #define PROCESS_MAX_PROCESSES 32
 #define PROCESS_STACK_SIZE (4096 * 4)
 
@@ -33,10 +34,10 @@ typedef struct pcb {
     void *stack_base;
 } pcb_t;
 
-void process_table_init(void);
 pcb_t *process_lookup(uint64_t pid);
 bool process_register(pcb_t *pcb);
 void process_unregister(uint64_t pid);
+uint64_t get_next_pid(void);
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void));
 

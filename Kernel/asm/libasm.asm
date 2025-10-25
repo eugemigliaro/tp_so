@@ -12,6 +12,9 @@ GLOBAL setSpeaker
 GLOBAL getRegisterSnapshot
 GLOBAL stackInit
 
+GLOBAL semLock
+GLOBAL semUnlock
+
 EXTERN register_snapshot
 EXTERN register_snapshot_taken
 
@@ -165,3 +168,14 @@ stackInit:
 	pop rbp
 	
 	ret
+
+semLock:
+    mov al, 1
+    xchg al, BYTE [rdi]
+    cmp al, 0
+    jne semLock
+    ret
+
+semUnlock:
+    mov BYTE [rdi], 0
+    ret

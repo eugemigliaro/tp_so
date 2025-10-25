@@ -4,46 +4,49 @@
 #include <lib.h>
 #include <scheduler.h>
 
-static uint64_t next_pid = 1;
+#define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
+
 static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
 
-void process_table_init(void) {
-    for (size_t i = 0; i < PROCESS_MAX_PROCESSES; ++i) {
-        pcb_table[i] = NULL;
-    }
-    next_pid = 1;
-}
-
 pcb_t *process_lookup(uint64_t pid) {
-    if (pid == 0 || pid >= PROCESS_MAX_PROCESSES) {
+    uint64_t index = PID_TO_INDEX(pid);
+    if (index == 0 || index >= PROCESS_MAX_PROCESSES) {
         return NULL;
     }
-    return pcb_table[pid];
+    return pcb_table[index];
 }
 
 bool process_register(pcb_t *pcb) {
     if (pcb == NULL) {
         return false;
     }
-    if (pcb->pid == 0 || pcb->pid >= PROCESS_MAX_PROCESSES) {
+    uint64_t index = PID_TO_INDEX(pcb->pid);
+    if (index == 0 || index >= PROCESS_MAX_PROCESSES) {
         return false;
     }
-    pcb_table[pcb->pid] = pcb;
+    if (pcb_table[index] != NULL) {
+        return false; // PID already in use
+    }
+    pcb_table[index] = pcb;
     return true;
 }
 
 void process_unregister(uint64_t pid) {
-    if (pid == 0 || pid >= PROCESS_MAX_PROCESSES) {
+    uint64_t index = PID_TO_INDEX(pid);
+    if (index == 0 || index >= PROCESS_MAX_PROCESSES) {
         return;
     }
-    pcb_table[pid] = NULL;
+    pcb_table[index] = NULL;
 }
 
 static uint64_t allocate_pid(void) {
-    if (next_pid >= PROCESS_MAX_PROCESSES) {
-        return 0;
+    for(uint64_t i = 0; i < PROCESS_MAX_PROCESSES; i++) {
+        if (pcb_table[i] == NULL) {
+            return PROCESS_FIRST_PID + i;
+        }
     }
-    return next_pid++;
+
+    return 0; // No available PID
 }
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, void (*entry_point)(void)) {
