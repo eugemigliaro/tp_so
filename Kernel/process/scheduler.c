@@ -192,3 +192,56 @@ void scheduler_for_each_ready(scheduler_iter_cb callback, void *context) {
         }
     }
 }
+
+int32_t scheduler_set_process_priority(uint64_t pid, uint8_t priority) {
+    if (priority < SCHEDULER_MAX_PRIORITY || priority > SCHEDULER_MIN_PRIORITY) {
+        return -1;
+    }
+
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        return -1;
+    }
+
+    if (pcb->state == PROCESS_STATE_TERMINATED) {
+        return -1;
+    }
+
+    if (pcb == scheduler.idle) {
+        return -1;
+    }
+
+    uint8_t old_priority = pcb->priority;
+
+    if (pcb->state == PROCESS_STATE_READY && priority != old_priority) {
+        queue_t *source_queue = queue_for_priority(old_priority);
+        queue_t *buffer_queue = queue_create();
+        if (buffer_queue == NULL) {
+            return -1;
+        }
+
+        pcb_t *entry = NULL;
+        while ((entry = queue_pop(source_queue)) != NULL) {
+            if (entry != pcb) {
+                queue_push(buffer_queue, entry);
+            }
+        }
+
+        while ((entry = queue_pop(buffer_queue)) != NULL) {
+            queue_push(source_queue, entry);
+        }
+        queue_destroy(buffer_queue, NULL);
+    }
+
+    pcb->priority = priority;
+
+    if (pcb->state == PROCESS_STATE_READY && priority != old_priority) {
+        queue_push(queue_for_priority(priority), pcb);
+    }
+
+    if (pcb == scheduler.current) {
+        pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+    }
+
+    return 0;
+}

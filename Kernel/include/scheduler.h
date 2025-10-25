@@ -24,5 +24,6 @@ void *schedule_tick(void *current_rsp);
 const scheduler_metrics_t *scheduler_get_metrics(void);
 
 void scheduler_for_each_ready(scheduler_iter_cb callback, void *context);
+int32_t scheduler_set_process_priority(uint64_t pid, uint8_t priority);
 
 #endif

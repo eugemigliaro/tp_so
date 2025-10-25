@@ -257,3 +257,7 @@ int32_t sys_process_get_pid(void) {
 int32_t sys_process_list(void) {
 	return print_process_list();
 }
+
+int32_t sys_process_set_priority(uint64_t pid, uint8_t priority) {
+	return scheduler_set_process_priority(pid, priority);
+}
