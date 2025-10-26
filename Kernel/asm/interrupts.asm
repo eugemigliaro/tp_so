@@ -2,6 +2,8 @@
 GLOBAL _cli
 GLOBAL _sti
 GLOBAL _hlt
+GLOBAL _force_scheduler_interrupt
+GLOBAL manually_triggered_timer_interrupt
 
 GLOBAL picMasterMask
 GLOBAL picSlaveMask
@@ -21,6 +23,10 @@ EXTERN syscallDispatcher
 EXTERN exceptionDispatcher
 EXTERN getStackBase
 EXTERN schedule_tick
+
+SECTION .bss
+
+manually_triggered_timer_interrupt: resb 1
 
 SECTION .text
 
@@ -138,6 +144,11 @@ _sti:
 	sti
 	ret
 
+_force_scheduler_interrupt:
+	mov BYTE [manually_triggered_timer_interrupt], 0x01
+	int 0x20
+	ret
+
 picMasterMask:
 	push rbp     ; Stack frame
 	mov rbp, rsp
@@ -164,9 +175,18 @@ picSlaveMask:
 _irq00Handler:
     pushState
 
+	mov al, [manually_triggered_timer_interrupt]
+	test al, al
+	jz .regular_tick
+
+	mov BYTE [manually_triggered_timer_interrupt], 0
+	jmp .run_scheduler
+
+.regular_tick:
 	mov rdi, 0 ; pass argument to irqDispatcher
 	call irqDispatcher
 
+.run_scheduler:
     mov rdi, rsp              ; arg: current stack frame pointer
     call schedule_tick        ; returns next stack in rax
     mov rsp, rax              ; switch to chosen process stack

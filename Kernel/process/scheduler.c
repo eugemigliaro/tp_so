@@ -105,6 +105,12 @@ pcb_t *scheduler_current(void) {
     return scheduler.current;
 }
 
+void scheduler_clear_current(pcb_t *pcb) {
+    if (pcb != NULL && scheduler.current == pcb) {
+        scheduler.current = NULL;
+    }
+}
+
 
 void *schedule_tick(void *current_rsp) {
     scheduler.metrics.total_ticks++;

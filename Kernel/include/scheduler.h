@@ -20,6 +20,7 @@ void scheduler_init(void);
 void scheduler_add_ready(pcb_t *pcb);
 bool scheduler_remove_ready(pcb_t *pcb);
 pcb_t *scheduler_current(void);
+void scheduler_clear_current(pcb_t *pcb);
 void *schedule_tick(void *current_rsp);
 const scheduler_metrics_t *scheduler_get_metrics(void);
 

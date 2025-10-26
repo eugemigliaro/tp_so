@@ -285,3 +285,28 @@ int32_t sys_process_unblock(uint64_t pid) {
     }
     return process_unblock(pcb) ? 0 : -1;
 }
+
+int32_t sys_process_kill(uint64_t pid) {
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        return -1;
+    }
+
+    process_state_t previous_state = pcb->state;
+    pcb->state = PROCESS_STATE_TERMINATED;
+
+    if (!process_remove(pcb)) {
+        return -1;
+    }
+
+    if (previous_state == PROCESS_STATE_RUNNING) {
+        _force_scheduler_interrupt();
+    }
+
+    return 0;
+}
+
+int32_t sys_process_yield(void) {
+	_force_scheduler_interrupt();
+	return 0;
+}

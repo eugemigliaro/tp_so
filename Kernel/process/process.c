@@ -101,6 +101,7 @@ bool process_remove(pcb_t *pcb) {
     scheduler_remove_ready(pcb);
 
     if (scheduler_current() == pcb) {
+        scheduler_clear_current(pcb);
         process_set_running(NULL);
     }
 
