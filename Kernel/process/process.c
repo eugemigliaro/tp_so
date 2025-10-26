@@ -93,19 +93,10 @@ bool process_unblock(pcb_t *pcb) {
     return true;
 }
 
-bool process_remove(pcb_t *pcb) {
+void process_free_memory(pcb_t *pcb) {
     if (pcb == NULL) {
-        return false;
+        return;
     }
-
-    scheduler_remove_ready(pcb);
-
-    if (scheduler_current() == pcb) {
-        scheduler_clear_current(pcb);
-        process_set_running(NULL);
-    }
-
-    process_unregister(pcb->pid);
 
     if (pcb->argv != NULL) {
         for (int i = 0; i < pcb->argc; i++) {
@@ -121,6 +112,23 @@ bool process_remove(pcb_t *pcb) {
     }
 
     mem_free(pcb);
+}
+
+bool process_remove(pcb_t *pcb) {
+    if (pcb == NULL) {
+        return false;
+    }
+
+    scheduler_remove_ready(pcb);
+
+    if (scheduler_current() == pcb) {
+        scheduler_clear_current(pcb);
+        process_set_running(NULL);
+    }
+
+    process_unregister(pcb->pid);
+
+    process_free_memory(pcb);
     return true;
 }
 

@@ -45,6 +45,7 @@ void process_set_running(pcb_t *pcb);
 bool process_block(pcb_t *pcb);
 bool process_unblock(pcb_t *pcb);
 bool process_remove(pcb_t *pcb);
+void process_free_memory(pcb_t *pcb);
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void (*entry_point)(void));
 int32_t print_process_list(void);

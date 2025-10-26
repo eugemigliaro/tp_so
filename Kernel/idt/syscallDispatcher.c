@@ -270,6 +270,28 @@ int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc,
 	return (int32_t)pcb->pid;
 }
 
+int32_t sys_process_exit(int32_t status) {
+	pcb_t *pcb = scheduler_current();
+
+	if (pcb == NULL) {
+		return status;
+	}
+
+	pcb->state = PROCESS_STATE_TERMINATED;
+
+	if (!process_remove(pcb)) {
+        return -1;
+  }
+
+	// Hasta que no estén implementados los semáforos queda así
+	// La idea sería que se marque como TERMINATED, se borre de las colas, se borre el current y se fuerce el tick,
+	// y que luego, cuando lo capture el padre, lo borre de la pcb_table y libere la memoria.
+
+	_force_scheduler_interrupt();
+
+	return status;
+}
+
 
 int32_t sys_process_block(uint64_t pid) {
     pcb_t *pcb = process_lookup(pid);
@@ -278,6 +300,7 @@ int32_t sys_process_block(uint64_t pid) {
     }
     return process_block(pcb) ? 0 : -1;
 }
+
 int32_t sys_process_unblock(uint64_t pid) {
     pcb_t *pcb = process_lookup(pid);
     if (pcb == NULL) {
