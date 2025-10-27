@@ -67,30 +67,33 @@ int main(){
 
 	setFontSize(2);
 	clear();
+
+	_cli();
+
 	print("Launching shell process...\n");
  
-	/* char **argv_shell = mem_alloc(sizeof(char *));
+	char **argv_shell = mem_alloc(sizeof(char *));
 	argv_shell[0] = "shell";
 	pcb_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))shellModuleAddress);
 	if (shell_process != NULL) {
 		scheduler_add_ready(shell_process);
 	} else {
 		print("Failed to create shell process\n");
-	} */
+	}
 
 	print("Launching quantum printing process...\n");
 
-	/* char **argv_quantum = mem_alloc(2 * sizeof(char *));
+	char **argv_quantum = mem_alloc(2 * sizeof(char *));
 	argv_quantum[0] = "quantum";
 	char *quantum_arg = mem_alloc(sizeof(char) * 6);
 	strcpy(quantum_arg, "arg1");
 	argv_quantum[1] = quantum_arg;
-	pcb_t *quantum_printing_process = createProcess(2, argv_quantum, 2, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))process_that_prints_its_remaining_quantum);
+	pcb_t *quantum_printing_process = createProcess(2, argv_quantum, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))process_that_prints_its_remaining_quantum);
 	if (quantum_printing_process != NULL) {
 		scheduler_add_ready(quantum_printing_process);
 	} else {
 		print("Failed to create quantum printing process\n");
-	} */
+	}
 
 	print("Launching semaphore demo workers...\n");
 	char *sem_worker_a_args[] = { "sem-A" };

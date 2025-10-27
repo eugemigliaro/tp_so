@@ -3,7 +3,7 @@
 #include <memoryManager.h>
 
 #define HEAP_ORDER_MIN 5
-#define HEAP_ORDER_MAX 16
+#define HEAP_ORDER_MAX 18
 #define HEAP_SIZE (1u << HEAP_ORDER_MAX)
 #define TREE_LEVELS (HEAP_ORDER_MAX - HEAP_ORDER_MIN + 1)
 #define NODE_COUNT ((1u << TREE_LEVELS) - 1)
