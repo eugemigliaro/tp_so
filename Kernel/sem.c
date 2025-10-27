@@ -7,13 +7,6 @@
 #include <process.h>
 #include <scheduler.h>
 
-typedef struct semaphore {
-    char *name;
-    uint32_t count;
-    uint8_t lock;
-    queue_t *waiting_processes;
-};
-
 static queue_t *registered_semaphores = NULL;
 static uint8_t registry_lock = 0;
 
@@ -95,6 +88,7 @@ int sem_post(sem_t *sem){
 
 int sem_wait(sem_t *sem){
     int ret = -1;
+    bool blocked = false;
     if(sem == NULL){
         return ret;
     }
@@ -108,12 +102,16 @@ int sem_wait(sem_t *sem){
         pcb_t *current_process = scheduler_current();
         if (current_process != NULL) {
             queue_push(sem->waiting_processes, current_process);
-            current_process->state = PROCESS_STATE_BLOCKED;
+            blocked = process_block(current_process);
             ret = 0;
         }
     }
 
     semUnlock(&sem->lock);
+
+    if (blocked) {
+        _force_scheduler_interrupt();
+    }
 
     return ret;
 }

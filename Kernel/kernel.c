@@ -12,6 +12,7 @@
 #include <process.h>
 #include <interrupts.h>
 #include <time.h>
+#include <sem.h>
 
 // extern uint8_t text;
 // extern uint8_t rodata;
@@ -28,6 +29,8 @@ static void * const snakeModuleAddress = (void *)0x500000;
 typedef int (*EntryPoint)();
 
 static void process_that_prints_its_remaining_quantum(int argc, char **argv);
+static void semaphore_worker(int argc, char **argv);
+static sem_t demo_sem;
 
 void clearBSS(void * bssAddress, uint64_t bssSize){
 	memset(bssAddress, 0, bssSize);
@@ -60,23 +63,24 @@ int main(){
 	mem_init();
 	process_table_init();
 	scheduler_init();
+	sem_init(&demo_sem, "demo_sem", 1);
 
 	setFontSize(2);
 	clear();
 	print("Launching shell process...\n");
  
-	char **argv_shell = mem_alloc(sizeof(char *));
+	/* char **argv_shell = mem_alloc(sizeof(char *));
 	argv_shell[0] = "shell";
 	pcb_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))shellModuleAddress);
 	if (shell_process != NULL) {
 		scheduler_add_ready(shell_process);
 	} else {
 		print("Failed to create shell process\n");
-	}
+	} */
 
 	print("Launching quantum printing process...\n");
 
-	char **argv_quantum = mem_alloc(2 * sizeof(char *));
+	/* char **argv_quantum = mem_alloc(2 * sizeof(char *));
 	argv_quantum[0] = "quantum";
 	char *quantum_arg = mem_alloc(sizeof(char) * 6);
 	strcpy(quantum_arg, "arg1");
@@ -86,6 +90,23 @@ int main(){
 		scheduler_add_ready(quantum_printing_process);
 	} else {
 		print("Failed to create quantum printing process\n");
+	} */
+
+	print("Launching semaphore demo workers...\n");
+	char *sem_worker_a_args[] = { "sem-A" };
+	pcb_t *sem_worker_a = createProcess(1, sem_worker_a_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
+	if (sem_worker_a != NULL) {
+		scheduler_add_ready(sem_worker_a);
+	} else {
+		print("Failed to create semaphore worker A\n");
+	}
+
+	char *sem_worker_b_args[] = { "sem-B" };
+	pcb_t *sem_worker_b = createProcess(1, sem_worker_b_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
+	if (sem_worker_b != NULL) {
+		scheduler_add_ready(sem_worker_b);
+	} else {
+		print("Failed to create semaphore worker B\n");
 	}
 
 	_sti();
@@ -111,6 +132,25 @@ static void process_that_prints_its_remaining_quantum(int argc, char **argv) {
 		print(argv[1]);
 		print("\n");
 		setTextColor(DEFAULT_TEXT_COLOR);
+		sleep(1);
+	}
+}
+
+static void semaphore_worker(int argc, char **argv) {
+	const char *label = (argc > 0 && argv[0] != NULL) ? argv[0] : "sem";
+	while (1) {
+		sem_wait(&demo_sem);
+		setTextColor(0x0099FF99);
+		print("[SEM] ");
+		print(label);
+		print(" acquired semaphore\n");
+		setTextColor(DEFAULT_TEXT_COLOR);
+		sleep(1);
+		print("[SEM] ");
+		print(label);
+		print(" releasing semaphore\n");
+		setTextColor(DEFAULT_TEXT_COLOR);
+		sem_post(&demo_sem);
 		sleep(1);
 	}
 }

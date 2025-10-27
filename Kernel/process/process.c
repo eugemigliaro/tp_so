@@ -75,8 +75,6 @@ bool process_block(pcb_t *pcb) {
 
     pcb->state = PROCESS_STATE_BLOCKED;
 
-    _force_scheduler_interrupt();
-
     return true;
 }
 
@@ -160,7 +158,7 @@ static const char *process_state_to_string(process_state_t state) {
     }
 }
 
-pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void (*entry_point)(void)) {
+pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void *entry_point) {
     if (entry_point == NULL) {
         return NULL;
     }

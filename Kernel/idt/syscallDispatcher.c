@@ -7,6 +7,7 @@
 #include <video.h>
 #include <time.h>
 #include <process.h>
+#include <scheduler.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
@@ -68,7 +69,10 @@ int32_t syscallDispatcher(Registers * registers) {
 		case 0x80000106: return sys_process_block((uint64_t) registers->rdi);
 		case 0x80000107: return sys_process_unblock((uint64_t) registers->rdi);
 		case 0x80000108: return sys_process_yield();
-		case 0x80000109: return sys_process_wait_children();
+		case 0x80000109: {
+			// TODO: implement child-waiting semantics
+			return -1;
+		}
 		
 		default:
             return 0;
@@ -279,7 +283,7 @@ int32_t sys_process_exit(int32_t status) {
 
 	pcb->state = PROCESS_STATE_TERMINATED;
 
-	if (!process_remove(pcb)) {
+	if (!process_exit(pcb)) {
         return -1;
   }
 
@@ -298,7 +302,11 @@ int32_t sys_process_block(uint64_t pid) {
     if (pcb == NULL) {
         return -1;
     }
-    return process_block(pcb) ? 0 : -1;
+    if (!process_block(pcb)) {
+        return -1;
+    }
+    _force_scheduler_interrupt();
+    return 0;
 }
 
 int32_t sys_process_unblock(uint64_t pid) {
@@ -318,11 +326,11 @@ int32_t sys_process_kill(uint64_t pid) {
     process_state_t previous_state = pcb->state;
     pcb->state = PROCESS_STATE_TERMINATED;
 
-    if (!process_remove(pcb)) {
+    if (!process_exit(pcb)) {
         return -1;
     }
 
-	//TODO: Ver si conviene forzar el tick acá o en process_remove
+	//TODO: Ver si conviene forzar el tick acá o en process_exit
     if (previous_state == PROCESS_STATE_RUNNING) {
         _force_scheduler_interrupt();
     }
@@ -331,6 +339,9 @@ int32_t sys_process_kill(uint64_t pid) {
 }
 
 int32_t sys_process_yield(void) {
+	//TODO: no funciona todavía, capaz conviene agregar un estado yield para que el scheduler decida facil
+	//pcb_t *pcb = scheduler_current();
+	//pcb_t->state = PROCESS_STATE_YIELDING; algo como esto
 	_force_scheduler_interrupt();
 	return 0;
 }

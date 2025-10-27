@@ -4,7 +4,12 @@
 #include <stdint.h>
 #include <queueADT.h>
 
-typedef struct semaphore sem_t;
+typedef struct semaphore {
+    char *name;
+    uint32_t count;
+    uint8_t lock;
+    queue_t *waiting_processes;
+} sem_t;
 
 void sem_init(sem_t *sem, const char *name, uint32_t initial_count);
 int sem_post(sem_t *sem);
