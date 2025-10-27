@@ -3,6 +3,7 @@
 #include <strings.h>
 #include <lib.h>
 #include <scheduler.h>
+#include <interrupts.h>
 
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
 
@@ -68,15 +69,14 @@ void process_set_running(pcb_t *pcb) {
 }
 
 bool process_block(pcb_t *pcb) {
-    if (pcb == NULL) {
-        return false;
-    }
-
-    if (!scheduler_remove_ready(pcb)) {
+    if (pcb == NULL || pcb->state != PROCESS_STATE_RUNNING) {
         return false;
     }
 
     pcb->state = PROCESS_STATE_BLOCKED;
+
+    _force_scheduler_interrupt();
+
     return true;
 }
 
@@ -114,21 +114,14 @@ void process_free_memory(pcb_t *pcb) {
     mem_free(pcb);
 }
 
-bool process_remove(pcb_t *pcb) {
+bool process_exit(pcb_t *pcb) {
     if (pcb == NULL) {
         return false;
     }
+    pcb->state = PROCESS_STATE_TERMINATED;
 
-    scheduler_remove_ready(pcb);
+    _force_scheduler_interrupt();
 
-    if (scheduler_current() == pcb) {
-        scheduler_clear_current(pcb);
-        process_set_running(NULL);
-    }
-
-    process_unregister(pcb->pid);
-
-    process_free_memory(pcb);
     return true;
 }
 

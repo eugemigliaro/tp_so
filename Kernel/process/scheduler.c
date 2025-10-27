@@ -124,12 +124,17 @@ void *schedule_tick(void *current_rsp) {
             // allow the idle task to yield every tick but still prefer real work
             running->state = PROCESS_STATE_READY;
         } else {
-            if (running->remaining_quantum > 1) {
+            if(running->state != PROCESS_STATE_RUNNING) {
+                // The running process was blocked or terminated during its time slice
+                scheduler.current = NULL;
+                process_set_running(NULL);
+                must_switch = true;
+            } else if (running->remaining_quantum > 0) {
                 running->remaining_quantum--;
                 running->last_quantum_ticks = (uint8_t)(SCHEDULER_DEFAULT_QUANTUM - running->remaining_quantum);
                 must_switch = false;
             } else {
-                running->last_quantum_ticks = SCHEDULER_DEFAULT_QUANTUM;
+                running->state = PROCESS_STATE_READY;
                 scheduler_add_ready(running);
                 scheduler.current = NULL;
                 process_set_running(NULL);
@@ -153,8 +158,8 @@ void *schedule_tick(void *current_rsp) {
             }
             scheduler.current = next;
             scheduler.current->state = PROCESS_STATE_RUNNING;
-            scheduler.current->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
-            scheduler.current->last_quantum_ticks = 0;
+            scheduler.current->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM - 1;
+            scheduler.current->last_quantum_ticks = 1;
             scheduler.metrics.context_switches++;
             process_set_running(scheduler.current);
             return (void *)next->context.rsp;

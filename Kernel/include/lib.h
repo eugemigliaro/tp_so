@@ -22,4 +22,6 @@ uint8_t * stackInit(void * rsp, void * rip, int argc, char ** argv);
 void semLock(uint8_t *lock);
 void semUnlock(uint8_t *lock);
 
+void _force_scheduler_interrupt(void);
+
 #endif

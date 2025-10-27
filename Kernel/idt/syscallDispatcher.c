@@ -322,6 +322,7 @@ int32_t sys_process_kill(uint64_t pid) {
         return -1;
     }
 
+	//TODO: Ver si conviene forzar el tick acá o en process_remove
     if (previous_state == PROCESS_STATE_RUNNING) {
         _force_scheduler_interrupt();
     }
