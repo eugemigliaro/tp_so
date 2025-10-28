@@ -122,11 +122,13 @@ bool process_exit(pcb_t *pcb) {
     pcb->state = PROCESS_STATE_TERMINATED;
 
     int waiting = sem_waiting_count(&pcb->wait_sem);
-    while (waiting > 0) {
+    if (waiting > 0) {
+        while (waiting-- > 0) {
+            sem_post(&pcb->wait_sem);
+        }
+    } else {
         sem_post(&pcb->wait_sem);
-        waiting--;
     }
-    sem_post(&pcb->wait_sem);
 
     _force_scheduler_interrupt();
 
