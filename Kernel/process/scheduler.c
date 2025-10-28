@@ -125,7 +125,10 @@ void *schedule_tick(void *current_rsp) {
             running->state = PROCESS_STATE_READY;
         } else {
             if(running->state != PROCESS_STATE_RUNNING) {
-                // The running process was blocked or terminated during its time slice
+                if (running->state == PROCESS_STATE_YIELD) {
+                    scheduler_add_ready(running);
+                }
+                // The running process was blocked, yielded, or terminated during its time slice
                 scheduler.current = NULL;
                 process_set_running(NULL);
                 must_switch = true;
@@ -134,7 +137,6 @@ void *schedule_tick(void *current_rsp) {
                 running->last_quantum_ticks = (uint8_t)(SCHEDULER_DEFAULT_QUANTUM - running->remaining_quantum);
                 must_switch = false;
             } else {
-                running->state = PROCESS_STATE_READY;
                 scheduler_add_ready(running);
                 scheduler.current = NULL;
                 process_set_running(NULL);

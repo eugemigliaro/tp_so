@@ -337,9 +337,10 @@ int32_t sys_process_kill(uint64_t pid) {
 }
 
 int32_t sys_process_yield(void) {
-	//TODO: no funciona todavía, capaz conviene agregar un estado yield para que el scheduler decida facil
-	//pcb_t *pcb = scheduler_current();
-	//pcb_t->state = PROCESS_STATE_YIELDING; algo como esto
+	pcb_t *pcb = scheduler_current();
+	if (pcb != NULL) {
+		pcb->state = PROCESS_STATE_YIELD;
+	}
 	_force_scheduler_interrupt();
 	return 0;
 }
