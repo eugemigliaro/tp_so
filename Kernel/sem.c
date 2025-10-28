@@ -148,3 +148,17 @@ int sem_wait(sem_t *sem){
 
     return ret;
 }
+
+int sem_waiting_count(sem_t *sem) {
+    if (sem == NULL) {
+        return -1;
+    }
+
+    int count = -1;
+    semLock(&sem->lock);
+    if (sem->waiting_processes != NULL) {
+        count = (int)queue_size(sem->waiting_processes);
+    }
+    semUnlock(&sem->lock);
+    return count;
+}
