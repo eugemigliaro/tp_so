@@ -78,6 +78,7 @@ int32_t sys_process_set_priority(uint64_t pid, uint8_t priority);
 int32_t sys_process_block(uint64_t pid);
 int32_t sys_process_unblock(uint64_t pid);
 int32_t sys_process_yield(void);
+int32_t sys_process_wait_pid(uint64_t pid);
 int32_t sys_process_wait_children(void);
 
 #endif

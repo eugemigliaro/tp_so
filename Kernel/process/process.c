@@ -4,6 +4,7 @@
 #include <lib.h>
 #include <scheduler.h>
 #include <interrupts.h>
+#include <sem.h>
 
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
 
@@ -109,6 +110,8 @@ void process_free_memory(pcb_t *pcb) {
         mem_free(pcb->stack_base);
     }
 
+    sem_destroy(&pcb->wait_sem);
+
     mem_free(pcb);
 }
 
@@ -117,6 +120,8 @@ bool process_exit(pcb_t *pcb) {
         return false;
     }
     pcb->state = PROCESS_STATE_TERMINATED;
+
+    sem_post(&pcb->wait_sem); //falta que haga un size del queue del semaforo y haga un post por proceso en wait
 
     _force_scheduler_interrupt();
 
@@ -215,11 +220,46 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
 	}
 
     pcb->name = pcb->argv[0]; // Set process name to first argument
+    pcb->child_count = 0;
+    for (size_t i = 0; i < PROCESS_MAX_CHILDREN; i++) {
+        pcb->children[i] = 0;
+    }
 
-    if (!process_register(pcb)) {
+    pcb->wait_sem.name = NULL;
+    pcb->wait_sem.count = 0;
+    pcb->wait_sem.lock = 0;
+    pcb->wait_sem.waiting_processes = NULL;
+
+    char sem_name[16] = "process";
+    sem_name[7] = '0' + (char)((pid / 100) % 10);
+    sem_name[8] = '0' + (char)((pid / 10) % 10);
+    sem_name[9] = '0' + (char)(pid % 10);
+    sem_name[10] = '\0';
+
+    sem_init(&pcb->wait_sem, sem_name, 0);
+    if (pcb->wait_sem.name == NULL || pcb->wait_sem.waiting_processes == NULL) {
+        sem_destroy(&pcb->wait_sem);
+        for (int i = 0; i < pcb->argc; i++) {
+            mem_free(pcb->argv[i]);
+        }
+        mem_free(pcb->argv);
         mem_free(pcb);
         mem_free(stack_base);
         return NULL;
+    }
+
+    if (!process_register(pcb)) {
+        sem_destroy(&pcb->wait_sem);
+        mem_free(pcb);
+        mem_free(stack_base);
+        return NULL;
+    }
+
+    if (ppid >= PROCESS_FIRST_PID) {
+        pcb_t *parent = process_lookup(ppid);
+        if (parent != NULL && parent->child_count < PROCESS_MAX_CHILDREN) {
+            parent->children[parent->child_count++] = pid;
+        }
     }
 
     return pcb;
@@ -282,4 +322,45 @@ int32_t print_process_list(void) {
     }
 
     return count;
+}
+
+int32_t process_wait_pid(uint64_t pid) {
+    pcb_t *child = process_lookup(pid);
+    if (child == NULL) {
+        return -1;
+    }
+
+    if (sem_wait(&child->wait_sem) < 0) {
+        return -1;
+    }
+
+    process_unregister(pid);
+    process_free_memory(child);
+    return 0;
+}
+
+int32_t process_wait_children(void) {
+    int32_t current_pid = get_pid();
+    if (current_pid < PROCESS_FIRST_PID) {
+        return -1;
+    }
+
+    pcb_t *parent = process_lookup((uint64_t)current_pid);
+    if (parent == NULL) {
+        return -1;
+    }
+
+    for (uint32_t i = 0; i < parent->child_count; i++) {
+        uint64_t child_pid = parent->children[i];
+        if (child_pid == 0) {
+            continue;
+        }
+        if (process_wait_pid(child_pid) < 0) {
+            return -1;
+        }
+        parent->children[i] = 0;
+    }
+
+    parent->child_count = 0;
+    return 0;
 }

@@ -62,6 +62,39 @@ void sem_init(sem_t *sem, const char *name, uint32_t initial_count){
     semUnlock(&registry_lock);
 }
 
+void sem_destroy(sem_t *sem) {
+    if (sem == NULL) {
+        return;
+    }
+
+    semLock(&registry_lock);
+    if (registered_semaphores != NULL) {
+        queue_remove(registered_semaphores, sem);
+    }
+    semUnlock(&registry_lock);
+
+    semLock(&sem->lock);
+
+    while (sem->waiting_processes != NULL && !queue_is_empty(sem->waiting_processes)) {
+        pcb_t *pcb = (pcb_t *)queue_pop(sem->waiting_processes);
+        if (pcb != NULL) {
+            process_unblock(pcb);
+        }
+    }
+
+    queue_destroy(sem->waiting_processes, NULL);
+    sem->waiting_processes = NULL;
+    sem->count = 0;
+
+    semUnlock(&sem->lock);
+    sem->lock = 0;
+
+    if (sem->name != NULL) {
+        mem_free(sem->name);
+        sem->name = NULL;
+    }
+}
+
 int sem_post(sem_t *sem){
     int ret = -1;
     if(sem == NULL){

@@ -69,10 +69,8 @@ int32_t syscallDispatcher(Registers * registers) {
 		case 0x80000106: return sys_process_block((uint64_t) registers->rdi);
 		case 0x80000107: return sys_process_unblock((uint64_t) registers->rdi);
 		case 0x80000108: return sys_process_yield();
-		case 0x80000109: {
-			// TODO: implement child-waiting semantics
-			return -1;
-		}
+		case 0x80000109: return sys_process_wait_pid((uint64_t) registers->rdi);
+		case 0x8000010A: return sys_process_wait_children();
 		
 		default:
             return 0;
@@ -344,4 +342,12 @@ int32_t sys_process_yield(void) {
 	//pcb_t->state = PROCESS_STATE_YIELDING; algo como esto
 	_force_scheduler_interrupt();
 	return 0;
+}
+
+int32_t sys_process_wait_pid(uint64_t pid) {
+	return process_wait_pid(pid);
+}
+
+int32_t sys_process_wait_children(void) {
+	return process_wait_children();
 }

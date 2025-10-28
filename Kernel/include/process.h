@@ -4,10 +4,12 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <sem.h>
 
 #define PROCESS_FIRST_PID 1
 #define PROCESS_MAX_PROCESSES 32
 #define PROCESS_STACK_SIZE (4096 * 4)
+#define PROCESS_MAX_CHILDREN PROCESS_MAX_PROCESSES
 
 typedef enum process_state {
     PROCESS_STATE_READY,
@@ -33,6 +35,9 @@ typedef struct pcb {
     uint8_t remaining_quantum;
     uint8_t last_quantum_ticks;
     void *stack_base;
+    sem_t wait_sem;
+    uint64_t children[PROCESS_MAX_CHILDREN];
+    uint32_t child_count;
 } pcb_t;
 
 pcb_t *process_lookup(uint64_t pid);
@@ -46,6 +51,8 @@ bool process_block(pcb_t *pcb);
 bool process_unblock(pcb_t *pcb);
 bool process_exit(pcb_t *pcb);
 void process_free_memory(pcb_t *pcb);
+int32_t process_wait_pid(uint64_t pid);
+int32_t process_wait_children(void);
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void *entry_point);
 int32_t print_process_list(void);

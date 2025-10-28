@@ -12,6 +12,7 @@ typedef struct semaphore {
 } sem_t;
 
 void sem_init(sem_t *sem, const char *name, uint32_t initial_count);
+void sem_destroy(sem_t *sem);
 int sem_post(sem_t *sem);
 int sem_wait(sem_t *sem);
 
