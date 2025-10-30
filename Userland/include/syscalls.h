@@ -42,6 +42,9 @@ int32_t sys_rectangle(int color, long long int width_pixels, long long int heigh
 
 int32_t sys_fill_video_memory(uint32_t hexColor);
 
+void *sys_mem_alloc(uint64_t size);
+int32_t sys_mem_free(void *ptr);
+
 int32_t sys_exec(int32_t (*fnPtr)(void));
 
 int32_t sys_register_key(uint8_t scancode, void (*fn)(enum REGISTERABLE_KEYS scancode));

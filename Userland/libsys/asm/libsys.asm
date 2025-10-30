@@ -18,6 +18,9 @@ GLOBAL sys_circle
 GLOBAL sys_rectangle
 GLOBAL sys_fill_video_memory
 
+GLOBAL sys_mem_alloc
+GLOBAL sys_mem_free
+
 GLOBAL sys_exec
 
 GLOBAL sys_register_key
@@ -63,6 +66,9 @@ sys_second: sys_int80 0x80000012
 sys_circle: sys_int80 0x80000019
 sys_rectangle: sys_int80 0x80000020
 sys_fill_video_memory: sys_int80 0x80000021
+
+sys_mem_alloc: sys_int80 0x80000022
+sys_mem_free: sys_int80 0x80000023
 
 sys_exec: sys_int80 0x800000A0
 

@@ -6,6 +6,8 @@
 #include <sys.h>
 #include <exceptions.h>
 
+#include <tests/test_mm.h>
+
 #ifdef ANSI_4_BIT_COLOR_SUPPORT
     #include <ansiColors.h>
 #endif
@@ -33,6 +35,7 @@ int man(void);
 int snake(void);
 int regs(void);
 int time(void);
+int testmm(void);
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode);
 static void printNextCommand(enum REGISTERABLE_KEYS scancode);
@@ -58,6 +61,7 @@ Command commands[] = {
     { .name = "regs",           .function = (int (*)(void))(unsigned long long)regs,            .description = "Prints the register snapshot, if any" },
     { .name = "man",            .function = (int (*)(void))(unsigned long long)man,             .description = "Prints the description of the provided command" },
     { .name = "snake",          .function = (int (*)(void))(unsigned long long)snake,           .description = "Launches the snake game" },
+    { .name = "test_mm",        .function = (int (*)(void))(unsigned long long)testmm,          .description = "Stress tests dynamic memory (usage: test_mm [max_bytes])" },
     { .name = "time",           .function = (int (*)(void))(unsigned long long)time,            .description = "Prints the current time" },
 };
 
@@ -281,4 +285,29 @@ int regs(void) {
 
 int snake(void) {
     return exec(snakeModuleAddress);
+}
+
+int testmm(void) {
+    char *argv_local[1] = {0};
+    uint64_t argc_local = 0;
+    uint8_t extra_args = 0;
+
+    char *token = strtok(NULL, " ");
+    while (token != NULL) {
+        if (argc_local < 1) {
+            argv_local[argc_local++] = token;
+        } else {
+            extra_args = 1;
+            break;
+        }
+        token = strtok(NULL, " ");
+    }
+
+    if (extra_args) {
+        printf("test_mm takes at most one numeric argument (max bytes).\n");
+        return 1;
+    }
+
+    uint64_t result = test_mm(argc_local, argv_local);
+    return (int)result;
 }

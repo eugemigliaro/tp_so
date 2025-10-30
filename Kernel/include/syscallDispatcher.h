@@ -23,7 +23,7 @@ typedef struct {
 	int64_t rip;
 } Registers;
 
-int32_t syscallDispatcher(Registers * registers);
+int64_t syscallDispatcher(Registers * registers);
 
 // Linux syscall prototypes
 int32_t sys_write(int32_t fd, char * __user_buf, int32_t count);
@@ -52,6 +52,9 @@ int32_t sys_circle(uint32_t hexColor, uint64_t topLeftX, uint64_t topLeftY, uint
 // Draw rectangle syscall prototype
 int32_t sys_rectangle(uint32_t color, uint64_t width_pixels, uint64_t height_pixels, uint64_t initial_pos_x, uint64_t initial_pos_y);
 int32_t sys_fill_video_memory(uint32_t hexColor);
+
+void *sys_mem_alloc(uint64_t size);
+int32_t sys_mem_free(void *ptr);
 
 // Custom exec syscall prototype
 int32_t sys_exec(int32_t (*fnPtr)(void));

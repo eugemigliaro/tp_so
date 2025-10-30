@@ -8,12 +8,13 @@
 #include <time.h>
 #include <process.h>
 #include <scheduler.h>
+#include <memoryManager.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
 
 // @todo Note: Technically.. registers on the stack are modifiable (since its a struct pointer, not struct). 
-int32_t syscallDispatcher(Registers * registers) {
+int64_t syscallDispatcher(Registers * registers) {
 	switch(registers->rax){
 		case 3: return sys_read(registers->rdi, (signed char *) registers->rsi, registers->rdx);
 		// Note: Register parameters are 64-bit
@@ -40,6 +41,8 @@ int32_t syscallDispatcher(Registers * registers) {
 		case 0x80000019: return sys_circle(registers->rdi, registers->rsi, registers->rdx, registers->rcx);
 		case 0x80000020: return sys_rectangle(registers->rdi, registers->rsi, registers->rdx, registers->rcx, registers->r8);
 		case 0x80000021: return sys_fill_video_memory(registers->rdi);
+		case 0x80000022: return (int64_t) sys_mem_alloc(registers->rdi);
+		case 0x80000023: return sys_mem_free((void *) registers->rdi);
 
 		case 0x800000A0: return sys_exec((int (*)(void)) registers->rdi);
 
@@ -184,6 +187,15 @@ int32_t sys_rectangle(uint32_t color, uint64_t width_pixels, uint64_t height_pix
 
 int32_t sys_fill_video_memory(uint32_t hexColor) {
 	fillVideoMemory(hexColor);
+	return 0;
+}
+
+void *sys_mem_alloc(uint64_t size) {
+	return mem_alloc((size_t) size);
+}
+
+int32_t sys_mem_free(void *ptr) {
+	mem_free(ptr);
 	return 0;
 }
 
