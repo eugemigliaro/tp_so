@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include <tests/test_mm.h>
+#include <test_mm.h>
 
 #define MAX_BLOCKS 128
 #define MAX_ITERATIONS 1024

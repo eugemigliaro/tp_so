@@ -154,7 +154,7 @@ int sem_waiting_count(sem_t *sem) {
         return -1;
     }
 
-    int count = -1;
+    int count = 0;
     semLock(&sem->lock);
     if (sem->waiting_processes != NULL) {
         count = (int)queue_size(sem->waiting_processes);

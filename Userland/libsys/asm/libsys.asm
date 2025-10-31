@@ -21,6 +21,23 @@ GLOBAL sys_fill_video_memory
 GLOBAL sys_mem_alloc
 GLOBAL sys_mem_free
 
+GLOBAL sys_sem_open
+GLOBAL sys_sem_close
+GLOBAL sys_sem_wait
+GLOBAL sys_sem_post
+
+GLOBAL sys_process_create
+GLOBAL sys_process_exit
+GLOBAL sys_process_get_pid
+GLOBAL sys_process_list
+GLOBAL sys_process_kill
+GLOBAL sys_process_set_priority
+GLOBAL sys_process_block
+GLOBAL sys_process_unblock
+GLOBAL sys_process_yield
+GLOBAL sys_process_wait_pid
+GLOBAL sys_process_wait_children
+
 GLOBAL sys_exec
 
 GLOBAL sys_register_key
@@ -69,6 +86,23 @@ sys_fill_video_memory: sys_int80 0x80000021
 
 sys_mem_alloc: sys_int80 0x80000022
 sys_mem_free: sys_int80 0x80000023
+
+sys_sem_open: sys_int80 0x80000120
+sys_sem_close: sys_int80 0x80000121
+sys_sem_wait: sys_int80 0x80000122
+sys_sem_post: sys_int80 0x80000123
+
+sys_process_create: sys_int80 0x80000100
+sys_process_exit: sys_int80 0x80000101
+sys_process_get_pid: sys_int80 0x80000102
+sys_process_list: sys_int80 0x80000103
+sys_process_kill: sys_int80 0x80000104
+sys_process_set_priority: sys_int80 0x80000105
+sys_process_block: sys_int80 0x80000106
+sys_process_unblock: sys_int80 0x80000107
+sys_process_yield: sys_int80 0x80000108
+sys_process_wait_pid: sys_int80 0x80000109
+sys_process_wait_children: sys_int80 0x8000010A
 
 sys_exec: sys_int80 0x800000A0
 

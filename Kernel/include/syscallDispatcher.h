@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <keyboard.h>
+#include <sem.h>
 
 typedef struct {
     int64_t r15;
@@ -55,6 +56,11 @@ int32_t sys_fill_video_memory(uint32_t hexColor);
 
 void *sys_mem_alloc(uint64_t size);
 int32_t sys_mem_free(void *ptr);
+
+int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing);
+int32_t sys_sem_close(sem_t *sem);
+int32_t sys_sem_wait(sem_t *sem);
+int32_t sys_sem_post(sem_t *sem);
 
 // Custom exec syscall prototype
 int32_t sys_exec(int32_t (*fnPtr)(void));

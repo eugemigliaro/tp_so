@@ -59,7 +59,9 @@ void * initializeKernelBinary(){
 
 int main(){	
 	load_idt();
-
+    
+	_cli();
+	
 	mem_init();
 	process_table_init();
 	scheduler_init();
@@ -67,8 +69,6 @@ int main(){
 
 	setFontSize(2);
 	clear();
-
-	_cli();
 
 	print("Launching shell process...\n");
  
@@ -81,7 +81,7 @@ int main(){
 		print("Failed to create shell process\n");
 	}
 
-	print("Launching quantum printing process...\n");
+	/* print("Launching quantum printing process...\n");
 
 	char **argv_quantum = mem_alloc(2 * sizeof(char *));
 	argv_quantum[0] = "quantum";
@@ -110,8 +110,7 @@ int main(){
 		scheduler_add_ready(sem_worker_b);
 	} else {
 		print("Failed to create semaphore worker B\n");
-	}
-
+	} */
 	_sti();
 
 	while (1) {

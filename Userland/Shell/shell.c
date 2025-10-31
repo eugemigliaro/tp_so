@@ -7,6 +7,9 @@
 #include <exceptions.h>
 
 #include <tests/test_mm.h>
+#include <tests/test_processes.h>
+#include <tests/test_priority.h>
+#include <tests/test_semaphore.h>
 
 #ifdef ANSI_4_BIT_COLOR_SUPPORT
     #include <ansiColors.h>
@@ -36,6 +39,9 @@ int snake(void);
 int regs(void);
 int time(void);
 int testmm(void);
+int testprocesses(void);
+int testpriority(void);
+int testsemaphore(void);
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode);
 static void printNextCommand(enum REGISTERABLE_KEYS scancode);
@@ -62,6 +68,9 @@ Command commands[] = {
     { .name = "man",            .function = (int (*)(void))(unsigned long long)man,             .description = "Prints the description of the provided command" },
     { .name = "snake",          .function = (int (*)(void))(unsigned long long)snake,           .description = "Launches the snake game" },
     { .name = "test_mm",        .function = (int (*)(void))(unsigned long long)testmm,          .description = "Stress tests dynamic memory (usage: test_mm [max_bytes])" },
+    { .name = "test_priority",  .function = (int (*)(void))(unsigned long long)testpriority,    .description = "Exercises scheduler priorities (usage: test_priority <target_value>)" },
+    { .name = "test_processes", .function = (int (*)(void))(unsigned long long)testprocesses,   .description = "Stress tests process lifecycle (usage: test_processes <max_procs>)" },
+    { .name = "test_semaphore", .function = (int (*)(void))(unsigned long long)testsemaphore,   .description = "Runs two cooperating processes with a semaphore (usage: test_semaphore [iterations])" },
     { .name = "time",           .function = (int (*)(void))(unsigned long long)time,            .description = "Prints the current time" },
 };
 
@@ -309,5 +318,80 @@ int testmm(void) {
     }
 
     uint64_t result = test_mm(argc_local, argv_local);
+    return (int)result;
+}
+
+int testprocesses(void) {
+    char *argv_local[1] = {0};
+    uint64_t argc_local = 0;
+    uint8_t extra_args = 0;
+
+    char *token = strtok(NULL, " ");
+    while (token != NULL) {
+        if (argc_local < 1) {
+            argv_local[argc_local++] = token;
+        } else {
+            extra_args = 1;
+            break;
+        }
+        token = strtok(NULL, " ");
+    }
+
+    if (extra_args || argc_local != 1) {
+        printf("test_processes expects exactly one numeric argument (max processes).\n");
+        return 1;
+    }
+
+    uint64_t result = test_processes(argc_local, argv_local);
+    return (int)result;
+}
+
+int testpriority(void) {
+    char *argv_local[1] = {0};
+    uint64_t argc_local = 0;
+    uint8_t extra_args = 0;
+
+    char *token = strtok(NULL, " ");
+    while (token != NULL) {
+        if (argc_local < 1) {
+            argv_local[argc_local++] = token;
+        } else {
+            extra_args = 1;
+            break;
+        }
+        token = strtok(NULL, " ");
+    }
+
+    if (extra_args || argc_local != 1) {
+        printf("test_priority expects exactly one numeric argument (target value).\n");
+        return 1;
+    }
+
+    uint64_t result = test_prio(argc_local, argv_local);
+    return (int)result;
+}
+
+int testsemaphore(void) {
+    char *argv_local[1] = {0};
+    uint64_t argc_local = 0;
+    uint8_t extra_args = 0;
+
+    char *token = strtok(NULL, " ");
+    while (token != NULL) {
+        if (argc_local < 1) {
+            argv_local[argc_local++] = token;
+        } else {
+            extra_args = 1;
+            break;
+        }
+        token = strtok(NULL, " ");
+    }
+
+    if (extra_args) {
+        printf("test_semaphore takes at most one numeric argument (iterations).\n");
+        return 1;
+    }
+
+    uint64_t result = test_semaphore(argc_local, argv_local);
     return (int)result;
 }

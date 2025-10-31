@@ -5,6 +5,7 @@
 #include <scheduler.h>
 #include <interrupts.h>
 #include <sem.h>
+#include <queueADT.h>
 
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
 
@@ -12,9 +13,6 @@ static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
 static int32_t running_pid = -1;    // Only one running process at a time (unicore)
 
 void process_table_init(void) {
-    for (size_t i = 0; i < PROCESS_MAX_PROCESSES; ++i) {
-        pcb_table[i] = NULL;
-    }
     running_pid = -1;
 }
 
@@ -70,7 +68,7 @@ void process_set_running(pcb_t *pcb) {
 }
 
 bool process_block(pcb_t *pcb) {
-    if (pcb == NULL || pcb->state != PROCESS_STATE_RUNNING) {
+    if (pcb == NULL) {
         return false;
     }
 
@@ -101,16 +99,23 @@ void process_free_memory(pcb_t *pcb) {
         for (int i = 0; i < pcb->argc; i++) {
             if (pcb->argv[i] != NULL) {
                 mem_free(pcb->argv[i]);
+                pcb->argv[i] = NULL;
             }
         }
         mem_free(pcb->argv);
+        pcb->argv = NULL;
     }
 
     if (pcb->stack_base != NULL) {
         mem_free(pcb->stack_base);
+        pcb->stack_base = NULL;
     }
 
-    sem_destroy(&pcb->wait_sem);
+    if (pcb->exit_sem != NULL) {
+        sem_destroy(pcb->exit_sem);
+        mem_free(pcb->exit_sem);
+        pcb->exit_sem = NULL;
+    }
 
     mem_free(pcb);
 }
@@ -121,14 +126,7 @@ bool process_exit(pcb_t *pcb) {
     }
     pcb->state = PROCESS_STATE_TERMINATED;
 
-    int waiting = sem_waiting_count(&pcb->wait_sem);
-    if (waiting > 0) {
-        while (waiting-- > 0) {
-            sem_post(&pcb->wait_sem);
-        }
-    } else {
-        sem_post(&pcb->wait_sem);
-    }
+    sem_post(pcb->exit_sem);
 
     _force_scheduler_interrupt();
 
@@ -187,15 +185,7 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
         return NULL;
     }
 
-    void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
-    if (stack_base == NULL) {
-        mem_free(pcb);
-        return NULL;
-    }
-
-    void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE - sizeof(uint64_t);
-    uint64_t prepared_rsp = (uint64_t)stackInit(stack_top, (void *)entry_point, argc, argv);
-
+    memset(pcb, 0, sizeof(pcb_t));
     pcb->pid = pid;
     pcb->ppid = ppid;
     pcb->priority = priority;
@@ -203,41 +193,47 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
     pcb->state = PROCESS_STATE_READY;
     pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     pcb->last_quantum_ticks = 0;
-    pcb->context.rsp = prepared_rsp;
-    pcb->stack_base = stack_base;
     pcb->argc = argc;
-    pcb->argv = (char **)mem_alloc(sizeof(char *) * pcb->argc);
-
-	if (pcb->argv == NULL) {
-		// @todo: ENOMEM
-        mem_free(pcb);
-		return NULL;
-	}
-	for (int i = 0; i < pcb->argc; i++) {
-		// @todo: ENOMEM
-		pcb->argv[i] = (char *)mem_alloc(sizeof(char) * (strlen(argv[i]) + 1));
-		if (pcb->argv[i] == NULL) {
-			for (int j = 0; j < i; j++) {
-				mem_free(pcb->argv[j]);
-			}
-			mem_free(pcb->argv);
-			mem_free(pcb);
-			return NULL;
-		}
-		strcpy(pcb->argv[i], argv[i]);
-        pcb->argv[i][strlen(argv[i])] = '\0';
-	}
-
-    pcb->name = pcb->argv[0]; // Set process name to first argument
     pcb->child_count = 0;
-    for (size_t i = 0; i < PROCESS_MAX_CHILDREN; i++) {
-        pcb->children[i] = 0;
+    pcb->children = NULL;
+
+    void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
+    if (stack_base == NULL) {
+        process_free_memory(pcb);
+        return NULL;
+    }
+    pcb->stack_base = stack_base;
+
+    void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE - sizeof(uint64_t);
+    uint64_t prepared_rsp = (uint64_t)stackInit(stack_top, (void *)entry_point, argc, argv);
+    pcb->context.rsp = prepared_rsp;
+
+    pcb->argv = (char **)mem_alloc(sizeof(char *) * pcb->argc);
+    if (pcb->argv == NULL) {
+        process_free_memory(pcb);
+        return NULL;
+    }
+    memset(pcb->argv, 0, sizeof(char *) * pcb->argc);
+
+    for (int i = 0; i < pcb->argc; i++) {
+        pcb->argv[i] = (char *)mem_alloc(sizeof(char) * (strlen(argv[i]) + 1));
+        if (pcb->argv[i] == NULL) {
+            process_free_memory(pcb);
+            return NULL;
+        }
+        strcpy(pcb->argv[i], argv[i]);
+        pcb->argv[i][strlen(argv[i])] = '\0';
     }
 
-    pcb->wait_sem.name = NULL;
-    pcb->wait_sem.count = 0;
-    pcb->wait_sem.lock = 0;
-    pcb->wait_sem.waiting_processes = NULL;
+    if (pcb->argc > 0) {
+        pcb->name = pcb->argv[0]; // Set process name to first argument
+    }
+
+    pcb->exit_sem = mem_alloc(sizeof(sem_t));
+    if (pcb->exit_sem == NULL) {
+        process_free_memory(pcb);
+        return NULL;
+    }
 
     char sem_name[16] = "process";
     sem_name[7] = '0' + (char)((pid / 100) % 10);
@@ -245,30 +241,23 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
     sem_name[9] = '0' + (char)(pid % 10);
     sem_name[10] = '\0';
 
-    sem_init(&pcb->wait_sem, sem_name, 0);
-    if (pcb->wait_sem.name == NULL || pcb->wait_sem.waiting_processes == NULL) {
-        sem_destroy(&pcb->wait_sem);
-        for (int i = 0; i < pcb->argc; i++) {
-            mem_free(pcb->argv[i]);
-        }
-        mem_free(pcb->argv);
-        mem_free(pcb);
-        mem_free(stack_base);
+    sem_init(pcb->exit_sem, sem_name, 0);
+    if (pcb->exit_sem->name == NULL || pcb->exit_sem->waiting_processes == NULL) {
+        process_free_memory(pcb);
         return NULL;
     }
-
-    if (!process_register(pcb)) {
-        sem_destroy(&pcb->wait_sem);
-        mem_free(pcb);
-        mem_free(stack_base);
-        return NULL;
-    }
-
     if (ppid >= PROCESS_FIRST_PID) {
         pcb_t *parent = process_lookup(ppid);
-        if (parent != NULL && parent->child_count < PROCESS_MAX_CHILDREN) {
-            parent->children[parent->child_count++] = pid;
+        if(parent == NULL) {
+            process_free_memory(pcb);
+            return NULL;
         }
+        add_child(parent, pcb);
+    }   
+
+    if (!process_register(pcb)) {
+        process_free_memory(pcb);
+        return NULL;
     }
 
     return pcb;
@@ -339,9 +328,7 @@ int32_t process_wait_pid(uint64_t pid) {
         return -1;
     }
 
-    if (sem_wait(&child->wait_sem) < 0) {
-        return -1;
-    }
+    sem_wait(child->exit_sem);
 
     process_unregister(pid);
     process_free_memory(child);
@@ -349,27 +336,42 @@ int32_t process_wait_pid(uint64_t pid) {
 }
 
 int32_t process_wait_children(void) {
-    int32_t current_pid = get_pid();
-    if (current_pid < PROCESS_FIRST_PID) {
+    pcb_t *current = scheduler_current();
+    if(current == NULL) {
         return -1;
     }
 
-    pcb_t *parent = process_lookup((uint64_t)current_pid);
-    if (parent == NULL) {
-        return -1;
+    if(current->child_count == 0 || current->children == NULL) {
+        return 0;
     }
-
-    for (uint32_t i = 0; i < parent->child_count; i++) {
-        uint64_t child_pid = parent->children[i];
-        if (child_pid == 0) {
-            continue;
-        }
-        if (process_wait_pid(child_pid) < 0) {
+    pcb_t *child = (pcb_t *)queue_pop(current->children);
+    while (current->child_count > 0 && child != NULL) {
+        if(child == NULL) {
             return -1;
         }
-        parent->children[i] = 0;
+
+        sem_wait(child->exit_sem);
+
+        process_unregister(child->pid);
+        process_free_memory(child);
+        child = (pcb_t *)queue_pop(current->children);
     }
 
-    parent->child_count = 0;
     return 0;
+}
+
+void add_child(pcb_t *parent, pcb_t *child) {
+    if(parent == NULL || child == NULL) {
+        return;
+    }
+
+    if(parent->children == NULL){
+        parent->children = queue_create();
+    }
+    if(parent->children == NULL){
+        return;
+    }
+
+    queue_push(parent->children, (void *)child);
+    parent->child_count++;
 }

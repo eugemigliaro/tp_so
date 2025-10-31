@@ -45,6 +45,23 @@ int32_t sys_fill_video_memory(uint32_t hexColor);
 void *sys_mem_alloc(uint64_t size);
 int32_t sys_mem_free(void *ptr);
 
+int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing);
+int32_t sys_sem_close(void *sem);
+int32_t sys_sem_wait(void *sem);
+int32_t sys_sem_post(void *sem);
+
+int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground);
+int32_t sys_process_exit(int32_t status);
+int32_t sys_process_get_pid(void);
+int32_t sys_process_list(void);
+int32_t sys_process_kill(uint64_t pid);
+int32_t sys_process_set_priority(uint64_t pid, uint8_t priority);
+int32_t sys_process_block(uint64_t pid);
+int32_t sys_process_unblock(uint64_t pid);
+int32_t sys_process_yield(void);
+int32_t sys_process_wait_pid(uint64_t pid);
+int32_t sys_process_wait_children(void);
+
 int32_t sys_exec(int32_t (*fnPtr)(void));
 
 int32_t sys_register_key(uint8_t scancode, void (*fn)(enum REGISTERABLE_KEYS scancode));

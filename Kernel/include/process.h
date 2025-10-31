@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <sem.h>
+#include <queueADT.h>
 
 #define PROCESS_FIRST_PID 1
 #define PROCESS_MAX_PROCESSES 32
@@ -36,8 +37,8 @@ typedef struct pcb {
     uint8_t remaining_quantum;
     uint8_t last_quantum_ticks;
     void *stack_base;
-    sem_t wait_sem;
-    uint64_t children[PROCESS_MAX_CHILDREN];
+    sem_t *exit_sem;
+    queue_t *children;
     uint32_t child_count;
 } pcb_t;
 
@@ -57,5 +58,7 @@ int32_t process_wait_children(void);
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void *entry_point);
 int32_t print_process_list(void);
+
+void add_child(pcb_t *parent, pcb_t *child);
 
 #endif

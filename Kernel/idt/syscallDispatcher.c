@@ -9,6 +9,7 @@
 #include <process.h>
 #include <scheduler.h>
 #include <memoryManager.h>
+#include <sem.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
@@ -55,9 +56,14 @@ int64_t syscallDispatcher(Registers * registers) {
 
 		case 0x800000E0: return sys_get_register_snapshot((int64_t *) registers->rdi);
 
-		case 0x800000F0: return sys_get_character_without_display();
+	case 0x800000F0: return sys_get_character_without_display();
 
-		case 0x80000100: return sys_process_create(
+	case 0x80000120: return sys_sem_open((const char *) registers->rdi, (uint32_t) registers->rsi, (uint8_t) registers->rdx);
+	case 0x80000121: return sys_sem_close((sem_t *) registers->rdi);
+	case 0x80000122: return sys_sem_wait((sem_t *) registers->rdi);
+	case 0x80000123: return sys_sem_post((sem_t *) registers->rdi);
+
+	case 0x80000100: return sys_process_create(
 			(void (*)(int, char **)) registers->rdi,
 			(int) registers->rsi,
 			(char **) registers->rdx,
@@ -199,6 +205,60 @@ int32_t sys_mem_free(void *ptr) {
 	return 0;
 }
 
+int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
+	if (name == NULL) {
+		return -1;
+	}
+
+	sem_t *sem = sem_find(name);
+	if (sem != NULL) {
+		return (int64_t)sem;
+	}
+
+	if (!create_if_missing) {
+		return -1;
+	}
+
+	sem = mem_alloc(sizeof(sem_t));
+	if (sem == NULL) {
+		return -1;
+	}
+
+	memset(sem, 0, sizeof(sem_t));
+	sem_init(sem, name, initial_count);
+	if (sem->name == NULL || sem->waiting_processes == NULL) {
+		sem_destroy(sem);
+		mem_free(sem);
+		return -1;
+	}
+
+	return (int64_t)sem;
+}
+
+int32_t sys_sem_close(sem_t *sem) {
+	if (sem == NULL) {
+		return -1;
+	}
+
+	sem_destroy(sem);
+	mem_free(sem);
+	return 0;
+}
+
+int32_t sys_sem_wait(sem_t *sem) {
+	if (sem == NULL) {
+		return -1;
+	}
+	return sem_wait(sem);
+}
+
+int32_t sys_sem_post(sem_t *sem) {
+	if (sem == NULL) {
+		return -1;
+	}
+	return sem_post(sem);
+}
+
 // ==================================================================
 // Custom exec system call
 // ==================================================================
@@ -295,7 +355,7 @@ int32_t sys_process_exit(int32_t status) {
 
 	if (!process_exit(pcb)) {
         return -1;
-  }
+    }
 
 	// Hasta que no estén implementados los semáforos queda así
 	// La idea sería que se marque como TERMINATED, se borre de las colas, se borre el current y se fuerce el tick,
