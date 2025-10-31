@@ -95,7 +95,7 @@ static void process_hello_goodbye(const char *label) {
 
         print_line(label, "hello", i + 1);
 
-        sleep(1);
+        sleep(1000);
 
         print_line(label, "goodbye", i + 1);
 
