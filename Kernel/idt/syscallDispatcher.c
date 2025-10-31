@@ -352,17 +352,9 @@ int32_t sys_process_exit(int32_t status) {
 		return status;
 	}
 
-	pcb->state = PROCESS_STATE_TERMINATED;
-
 	if (!process_exit(pcb)) {
-        return -1;
+        status = -1;
     }
-
-	// Hasta que no estén implementados los semáforos queda así
-	// La idea sería que se marque como TERMINATED, se borre de las colas, se borre el current y se fuerce el tick,
-	// y que luego, cuando lo capture el padre, lo borre de la pcb_table y libere la memoria.
-
-	_force_scheduler_interrupt();
 
 	return status;
 }
@@ -394,16 +386,8 @@ int32_t sys_process_kill(uint64_t pid) {
         return -1;
     }
 
-    process_state_t previous_state = pcb->state;
-    pcb->state = PROCESS_STATE_TERMINATED;
-
     if (!process_exit(pcb)) {
         return -1;
-    }
-
-	//TODO: Ver si conviene forzar el tick acá o en process_exit
-    if (previous_state == PROCESS_STATE_RUNNING) {
-        _force_scheduler_interrupt();
     }
 
     return 0;
