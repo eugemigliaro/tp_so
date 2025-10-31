@@ -111,6 +111,7 @@ int main(){
 	} else {
 		print("Failed to create semaphore worker B\n");
 	} */
+
 	_sti();
 
 	while (1) {

@@ -341,6 +341,7 @@ int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc,
 	if (pcb == NULL) {
 		return -1;
 	}
+	scheduler_add_ready(pcb);
 	return (int32_t)pcb->pid;
 }
 
