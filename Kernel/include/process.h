@@ -39,7 +39,6 @@ typedef struct pcb {
     void *stack_base;
     sem_t *exit_sem;
     queue_t *children;
-    uint32_t child_count;
 } pcb_t;
 
 pcb_t *process_lookup(uint64_t pid);

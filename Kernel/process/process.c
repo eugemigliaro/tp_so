@@ -194,7 +194,6 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
     pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     pcb->last_quantum_ticks = 0;
     pcb->argc = argc;
-    pcb->child_count = 0;
     pcb->children = NULL;
 
     void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
@@ -322,38 +321,82 @@ int32_t print_process_list(void) {
     return count;
 }
 
-int32_t process_wait_pid(uint64_t pid) {
+static bool is_child(pcb_t *parent, pcb_t *process) {
+    if (parent == NULL || process == NULL) {
+        return false;
+    }
+    return process->ppid == parent->pid;
+}
+
+static int32_t reap_child_process(pcb_t *process) {
+    if (process == NULL) {
+        return -1;
+    }
+
+    sem_wait(process->exit_sem);
+
+    process_unregister(process->pid);
+    process_free_memory(process);
+    return 0;
+}
+
+int32_t process_wait_pid(uint64_t pid) { 
+
+    _cli();
+    pcb_t * current = scheduler_current();
+    _sti();
+
+    if (current == NULL) {
+        return -1;
+    }
+
     pcb_t *child = process_lookup(pid);
+
     if (child == NULL) {
         return -1;
     }
 
-    sem_wait(child->exit_sem);
+    if (!is_child(current, child)) {
+        return -1;
+    }
 
-    process_unregister(pid);
-    process_free_memory(child);
-    return 0;
+    bool removed = false;
+    if (current->children != NULL) {
+        removed = queue_remove(current->children, child);
+    }
+
+    if (!removed) {
+        return -1;
+    }
+
+    return reap_child_process(child);
+
 }
 
 int32_t process_wait_children(void) {
+
+    _cli();
     pcb_t *current = scheduler_current();
+    _sti();
+
     if(current == NULL) {
         return -1;
     }
 
-    if(current->child_count == 0 || current->children == NULL) {
+    if(current->children == NULL || queue_is_empty(current->children)) {
         return 0;
     }
     pcb_t *child = (pcb_t *)queue_pop(current->children);
-    while (current->child_count > 0 && child != NULL) {
-        if(child == NULL) {
+    while (child != NULL) {
+
+        if (!is_child(current, child)) {
             return -1;
         }
 
-        sem_wait(child->exit_sem);
+        if (reap_child_process(child) != 0) {
+            return -1;
+        }
 
-        process_unregister(child->pid);
-        process_free_memory(child);
         child = (pcb_t *)queue_pop(current->children);
     }
 
@@ -373,5 +416,4 @@ void add_child(pcb_t *parent, pcb_t *child) {
     }
 
     queue_push(parent->children, (void *)child);
-    parent->child_count++;
 }
