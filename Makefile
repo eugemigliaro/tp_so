@@ -1,5 +1,5 @@
 
-MEMORY_MANAGER ?= mymalloc
+MEMORY_MANAGER ?= buddy
 
 all:  bootloader kernel userland image
 

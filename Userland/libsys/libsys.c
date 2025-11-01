@@ -83,3 +83,63 @@ int32_t getRegisterSnapshot(int64_t * registers) {
 int32_t getCharacterWithoutDisplay(void) {
     return sys_get_character_without_display();
 }
+
+int32_t processCreate(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground) {
+    return sys_process_create(entry_point, argc, argv, priority, foreground);
+}
+
+int32_t processExit(int32_t status) {
+    return sys_process_exit(status);
+}
+
+int32_t processGetPid(void) {
+    return sys_process_get_pid();
+}
+
+int32_t processList(void) {
+    return sys_process_list();
+}
+
+int32_t processKill(uint64_t pid) {
+    return sys_process_kill(pid);
+}
+
+int32_t processSetPriority(uint64_t pid, uint8_t priority) {
+    return sys_process_set_priority(pid, priority);
+}
+
+int32_t processBlock(uint64_t pid) {
+    return sys_process_block(pid);
+}
+
+int32_t processUnblock(uint64_t pid) {
+    return sys_process_unblock(pid);
+}
+
+int32_t processYield(void) {
+    return sys_process_yield();
+}
+
+int32_t processWaitPid(uint64_t pid) {
+    return sys_process_wait_pid(pid);
+}
+
+int32_t processWaitChildren(void) {
+    return sys_process_wait_children();
+}
+
+void *semOpen(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
+    return (void *)sys_sem_open(name, initial_count, create_if_missing);
+}
+
+int32_t semClose(void *sem) {
+    return sys_sem_close(sem);
+}
+
+int32_t semWait(void *sem) {
+    return sys_sem_wait(sem);
+}
+
+int32_t semPost(void *sem) {
+    return sys_sem_post(sem);
+}

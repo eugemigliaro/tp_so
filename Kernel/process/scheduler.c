@@ -30,12 +30,14 @@ static size_t priority_index(uint8_t priority) {
 }
 
 static queue_t *queue_for_priority(uint8_t priority) {
+    _cli();
     size_t index = priority_index(priority);
     queue_t *queue = scheduler.ready_queues[index];
     if (queue == NULL) {
         queue = queue_create();
         scheduler.ready_queues[index] = queue;
     }
+    _sti();
     return queue;
 }
 
@@ -58,6 +60,7 @@ static uint8_t priority_from_usage(uint8_t ticks_used) {
 }
 
 void scheduler_init(void) {
+    _cli();
     for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
         queue_t *queue = queue_create();
         scheduler.ready_queues[i] = queue;
@@ -65,11 +68,14 @@ void scheduler_init(void) {
 
     char **argv_idle = mem_alloc(sizeof(char *));
     argv_idle[0] = "idle";
-    scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, idle_process_entry);
+    scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, 0, idle_process_entry);
+    _sti();
 }
 
 void scheduler_add_ready(pcb_t *pcb) {
+    _cli();
     if (pcb == NULL) {
+        _sti();
         return;
     }
     pcb->state = PROCESS_STATE_READY;
@@ -79,10 +85,42 @@ void scheduler_add_ready(pcb_t *pcb) {
     pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     pcb->last_quantum_ticks = 0;
     queue_push(queue_for_priority(pcb->priority), pcb);
+    _sti();
+}
+
+bool scheduler_remove_ready(pcb_t *pcb) {
+    _cli();
+    if (pcb == NULL || pcb == scheduler.idle) {
+        _sti();
+        return false;
+    }
+
+    queue_t *queue = queue_for_priority(pcb->priority);
+    if (queue != NULL && queue_remove(queue, pcb)) {
+        _sti();
+        return true;
+    }
+
+    for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
+        queue_t *other_queue = scheduler.ready_queues[i];
+        if (other_queue != NULL && other_queue != queue && queue_remove(other_queue, pcb)) {
+            _sti();
+            return true;
+        }
+    }
+    _sti();
+
+    return false;
 }
 
 pcb_t *scheduler_current(void) {
     return scheduler.current;
+}
+
+void scheduler_clear_current(pcb_t *pcb) {
+    if (pcb != NULL && scheduler.current == pcb) {
+        scheduler.current = NULL;
+    }
 }
 
 
@@ -98,36 +136,46 @@ void *schedule_tick(void *current_rsp) {
             // allow the idle task to yield every tick but still prefer real work
             running->state = PROCESS_STATE_READY;
         } else {
-            if (running->remaining_quantum > 1) {
+            if(running->state != PROCESS_STATE_RUNNING) {
+                if (running->state == PROCESS_STATE_YIELD) {
+                    scheduler_add_ready(running);
+                }
+                // The running process was blocked, yielded, or terminated during its time slice
+                scheduler.current = NULL;
+                process_set_running(NULL);
+                must_switch = true;
+            } else if (running->remaining_quantum > 0) {
                 running->remaining_quantum--;
                 running->last_quantum_ticks = (uint8_t)(SCHEDULER_DEFAULT_QUANTUM - running->remaining_quantum);
                 must_switch = false;
             } else {
-                running->last_quantum_ticks = SCHEDULER_DEFAULT_QUANTUM;
                 scheduler_add_ready(running);
                 scheduler.current = NULL;
+                process_set_running(NULL);
                 must_switch = true;
             }
         }
     }
 
     if (!must_switch) {
+        process_set_running(scheduler.current);
         return current_rsp;
     }
 
     for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
         queue_t *queue = queue_for_priority(priority);
         pcb_t *next = queue_pop(queue);
-        if (next != NULL) {
+        if (next != NULL && next->state == PROCESS_STATE_READY) {
             if (next == scheduler.idle) {
                 scheduler.idle->state = PROCESS_STATE_READY;
                 continue;
             }
             scheduler.current = next;
             scheduler.current->state = PROCESS_STATE_RUNNING;
-            scheduler.current->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
-            scheduler.current->last_quantum_ticks = 0;
+            scheduler.current->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM - 1;
+            scheduler.current->last_quantum_ticks = 1;
             scheduler.metrics.context_switches++;
+            process_set_running(scheduler.current);
             return (void *)next->context.rsp;
         }
     }
@@ -139,9 +187,11 @@ void *schedule_tick(void *current_rsp) {
             scheduler.metrics.context_switches++;
         }
         scheduler.current = scheduler.idle;
+        process_set_running(scheduler.idle);
         return (void *)scheduler.idle->context.rsp;
     }
 
+    process_set_running(NULL);
     return current_rsp;
 }
 
@@ -166,4 +216,64 @@ void scheduler_for_each_ready(scheduler_iter_cb callback, void *context) {
             callback(pcb, context);
         }
     }
+}
+
+int32_t scheduler_set_process_priority(uint64_t pid, uint8_t priority) {
+    _cli();
+    if (priority < SCHEDULER_MAX_PRIORITY || priority > SCHEDULER_MIN_PRIORITY) {
+        _sti();
+        return -1;
+    }
+
+    pcb_t *pcb = process_lookup(pid);
+    if (pcb == NULL) {
+        _sti();
+        return -1;
+    }
+
+    if (pcb->state == PROCESS_STATE_TERMINATED) {
+        _sti();
+        return -1;
+    }
+
+    if (pcb == scheduler.idle) {
+        _sti();
+        return -1;
+    }
+
+    uint8_t old_priority = pcb->priority;
+
+    if (pcb->state == PROCESS_STATE_READY && priority != old_priority) {
+        queue_t *source_queue = queue_for_priority(old_priority);
+        queue_t *buffer_queue = queue_create();
+        if (buffer_queue == NULL) {
+            _sti();
+            return -1;
+        }
+
+        pcb_t *entry = NULL;
+        while ((entry = queue_pop(source_queue)) != NULL) {
+            if (entry != pcb) {
+                queue_push(buffer_queue, entry);
+            }
+        }
+
+        while ((entry = queue_pop(buffer_queue)) != NULL) {
+            queue_push(source_queue, entry);
+        }
+        queue_destroy(buffer_queue, NULL);
+    }
+
+    pcb->priority = priority;
+
+    if (pcb->state == PROCESS_STATE_READY && priority != old_priority) {
+        queue_push(queue_for_priority(priority), pcb);
+    }
+
+    if (pcb == scheduler.current) {
+        pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+    }
+    _sti();
+
+    return 0;
 }

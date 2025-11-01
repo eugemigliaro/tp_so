@@ -3,6 +3,13 @@
 # Detectar el sistema operativo
 OS=$(uname -s)
 AUDIO_CONFIG=""
+DEBUG_FLAGS=""
+
+if [ $# -gt 0 ] && [ "$1" = "gdb" ]; then
+    DEBUG_FLAGS="-s -S"
+    echo "Modo depuración GDB: habilitando flags -s -S"
+    shift
+fi
 
 # Comprobar si estamos en WSL
 IS_WSL=0
@@ -51,11 +58,11 @@ case $OS in
 esac
 
 # Ejecutar QEMU con la configuración adecuada
-echo "Ejecutando: qemu-system-x86_64 -hda Image/x64BareBonesImage.qcow2 -m 512 $AUDIO_CONFIG"
-qemu-system-x86_64 -hda Image/x64BareBonesImage.qcow2 -m 512 $AUDIO_CONFIG
+echo "Ejecutando: qemu-system-x86_64 -hda Image/x64BareBonesImage.qcow2 -m 512 $AUDIO_CONFIG $DEBUG_FLAGS $*"
+qemu-system-x86_64 -hda Image/x64BareBonesImage.qcow2 -m 512 $AUDIO_CONFIG $DEBUG_FLAGS "$@"
 
 # Si lo anterior falla, probar estas alternativas:
 if [ $? -ne 0 ] && [ $IS_WSL -eq 1 ]; then
     echo "Error con la configuración de audio. Probando alternativa sin audio específico..."
-    qemu-system-x86_64 -hda Image/x64BareBonesImage.qcow2 -m 512
+    qemu-system-x86_64 -hda Image/x64BareBonesImage.qcow2 -m 512 $DEBUG_FLAGS "$@"
 fi

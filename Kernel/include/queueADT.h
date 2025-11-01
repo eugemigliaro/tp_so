@@ -21,6 +21,7 @@ size_t queue_size(const queue_t *queue);
 
 bool queue_push(queue_t *queue, void *element);
 void *queue_pop(queue_t *queue);
+bool queue_remove(queue_t *queue, void *element);
 void *queue_peek(const queue_t *queue);
 
 queue_iterator_t queue_iter(const queue_t *queue);

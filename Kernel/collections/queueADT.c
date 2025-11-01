@@ -82,6 +82,37 @@ bool queue_push(queue_t *queue, void *element) {
     return true;
 }
 
+bool queue_remove(queue_t *queue, void *element) {
+    if (queue == NULL) {
+        return false;
+    }
+
+    struct queue_node *prev = NULL;
+    struct queue_node *current = queue->head;
+
+    while (current != NULL) {
+        if (current->data == element) {
+            if (prev == NULL) {
+                queue->head = current->next;
+            } else {
+                prev->next = current->next;
+            }
+
+            if (current == queue->tail) {
+                queue->tail = prev;
+            }
+
+            mem_free(current);
+            queue->size--;
+            return true;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    return false;
+}
+
 void *queue_pop(queue_t *queue) {
     if (queue == NULL || queue->head == NULL) {
         return NULL;

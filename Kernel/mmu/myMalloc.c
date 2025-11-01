@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <memoryManager.h>
+#include <interrupts.h>
 
 #define HEAP_SIZE (4096 * 16)
 
@@ -16,13 +17,16 @@ static uint8_t heap[HEAP_SIZE];
 static Block *free_list = NULL;
 
 void mem_init() {
+    _cli();
     free_list = (Block *) heap;
     free_list->size = HEAP_SIZE - BLOCK_SIZE;
     free_list->free = 1;
     free_list->next = NULL;
+    _sti();
 }
 
 void *mem_alloc(size_t size) {
+    _cli();
     Block *curr = free_list;
 
     while (curr) {
@@ -37,25 +41,31 @@ void *mem_alloc(size_t size) {
                 curr->size = size;
             }
             curr->free = 0;
+            _sti();
             return (uint8_t *)curr + BLOCK_SIZE;
         }
         curr = curr->next;
     }
+    _sti();
 
     return NULL;
 }
 
 
 void mem_free(void *ptr) {
+    _cli();
     if (!ptr) {
+        _sti();
         return;
     }
 
     Block *block = (Block *)((uint8_t *)ptr - BLOCK_SIZE);
     block->free = 1;
+    _sti();
 }
 
 void mem_status(size_t *total, size_t *used, size_t *available) {
+    _cli();
     *total = HEAP_SIZE;
     *used = 0;
     *available = 0;
@@ -69,4 +79,5 @@ void mem_status(size_t *total, size_t *used, size_t *available) {
         }
         curr = curr->next;
     }
+    _sti();
 }

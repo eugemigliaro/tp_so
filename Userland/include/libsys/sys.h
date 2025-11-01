@@ -118,4 +118,21 @@ void sleep(uint32_t milliseconds);
 int32_t getRegisterSnapshot(int64_t * registers);
 int32_t getCharacterWithoutDisplay(void);
 
+int32_t processCreate(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground);
+int32_t processExit(int32_t status);
+int32_t processGetPid(void);
+int32_t processList(void);
+int32_t processKill(uint64_t pid);
+int32_t processSetPriority(uint64_t pid, uint8_t priority);
+int32_t processBlock(uint64_t pid);
+int32_t processUnblock(uint64_t pid);
+int32_t processYield(void);
+int32_t processWaitPid(uint64_t pid);
+int32_t processWaitChildren(void);
+
+void *semOpen(const char *name, uint32_t initial_count, uint8_t create_if_missing);
+int32_t semClose(void *sem);
+int32_t semWait(void *sem);
+int32_t semPost(void *sem);
+
 #endif

@@ -1,9 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <memoryManager.h>
+#include <interrupts.h>
 
 #define HEAP_ORDER_MIN 5
-#define HEAP_ORDER_MAX 16
+#define HEAP_ORDER_MAX 19
 #define HEAP_SIZE (1u << HEAP_ORDER_MAX)
 #define TREE_LEVELS (HEAP_ORDER_MAX - HEAP_ORDER_MIN + 1)
 #define NODE_COUNT ((1u << TREE_LEVELS) - 1)
@@ -150,19 +151,24 @@ static size_t free_bytes(const BuddyNode *node) {
 }
 
 void mem_init(void) {
+    _cli();
     root = build_tree(0, HEAP_ORDER_MAX, heap);
+    _sti();
 }
 
 void *mem_alloc(size_t size) {
+    _cli();
     if (root == NULL) {
         mem_init();
     }
 
     if (size == 0 || size > HEAP_SIZE) {
+        _sti();
         return NULL;
     }
 
     if (size > HEAP_SIZE - sizeof(AllocationHeader)) {
+        _sti();
         return NULL;
     }
 
@@ -170,26 +176,32 @@ void *mem_alloc(size_t size) {
     int order = required_order(total);
 
     if (order > HEAP_ORDER_MAX) {
+        _sti();
         return NULL;
     }
 
     BuddyNode *node = acquire_node(root, order);
     if (node == NULL) {
+        _sti();
         return NULL;
     }
 
     AllocationHeader *header = (AllocationHeader *)node->base;
     header->node = node;
+    _sti();
 
     return node->base + sizeof(AllocationHeader);
 }
 
 void mem_free(void *ptr) {
+    _cli();
     if (ptr == NULL) {
+        _sti();
         return;
     }
 
     if (root == NULL) {
+        _sti();
         return;
     }
 
@@ -197,15 +209,18 @@ void mem_free(void *ptr) {
     BuddyNode *node = header->node;
 
     if (node == NULL || node->state != NODE_USED) {
+        
         return;
     }
 
     header->node = NULL;
     node->state = NODE_FREE;
     coalesce_up(node->parent);
+    _sti();
 }
 
 void mem_status(size_t *total, size_t *used, size_t *available) {
+    _cli();
     if (root == NULL) {
         mem_init();
     }
@@ -223,4 +238,5 @@ void mem_status(size_t *total, size_t *used, size_t *available) {
     if (used != NULL) {
         *used = HEAP_SIZE - free_total;
     }
+    _sti();
 }

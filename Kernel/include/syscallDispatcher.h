@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <keyboard.h>
+#include <sem.h>
 
 typedef struct {
     int64_t r15;
@@ -23,7 +24,7 @@ typedef struct {
 	int64_t rip;
 } Registers;
 
-int32_t syscallDispatcher(Registers * registers);
+int64_t syscallDispatcher(Registers * registers);
 
 // Linux syscall prototypes
 int32_t sys_write(int32_t fd, char * __user_buf, int32_t count);
@@ -53,6 +54,14 @@ int32_t sys_circle(uint32_t hexColor, uint64_t topLeftX, uint64_t topLeftY, uint
 int32_t sys_rectangle(uint32_t color, uint64_t width_pixels, uint64_t height_pixels, uint64_t initial_pos_x, uint64_t initial_pos_y);
 int32_t sys_fill_video_memory(uint32_t hexColor);
 
+void *sys_mem_alloc(uint64_t size);
+int32_t sys_mem_free(void *ptr);
+
+int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing);
+int32_t sys_sem_close(sem_t *sem);
+int32_t sys_sem_wait(sem_t *sem);
+int32_t sys_sem_post(sem_t *sem);
+
 // Custom exec syscall prototype
 int32_t sys_exec(int32_t (*fnPtr)(void));
 
@@ -67,5 +76,18 @@ int32_t sys_get_register_snapshot(int64_t * registers);
 
 // Get character without showing
 int32_t sys_get_character_without_display(void);
+
+// Process management syscalls
+int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground);
+int32_t sys_process_exit(int32_t status);
+int32_t sys_process_get_pid(void);
+int32_t sys_process_list(void);
+int32_t sys_process_kill(uint64_t pid);
+int32_t sys_process_set_priority(uint64_t pid, uint8_t priority);
+int32_t sys_process_block(uint64_t pid);
+int32_t sys_process_unblock(uint64_t pid);
+int32_t sys_process_yield(void);
+int32_t sys_process_wait_pid(uint64_t pid);
+int32_t sys_process_wait_children(void);
 
 #endif
