@@ -27,6 +27,8 @@ static pipe_t pipes[MAX_PIPES];
 static uint8_t next_pipe_id = 0;
 static char sem_name[SEM_NAME_LENGTH];
 
+static void destroy_pipe(uint8_t id, pipe_t pipe);
+
 int init_pipes(void) {
   strcpy(sem_name, "pipe_XXX");
   sem_name[SEM_NAME_LENGTH - 1] = '\0';
@@ -208,6 +210,23 @@ int write_pipe(uint8_t id, const uint8_t * buffer, uint64_t bytes) {
 	return (int)written_bytes;
 }
 
+static void destroy_pipe(uint8_t id, pipe_t pipe) {
+	if (pipe == NULL) {
+		return;
+	}
+
+	sem_destroy(pipe->can_read);
+	sem_destroy(pipe->can_write);
+	sem_destroy(pipe->mutex);
+
+	mem_free(pipe->can_read);
+	mem_free(pipe->can_write);
+	mem_free(pipe->mutex);
+	mem_free(pipe);
+
+	pipes[id] = NULL;
+}
+
 void unattach_from_pipe(uint8_t id, int pid) {
   if (id >= MAX_PIPES || pipes[id] == NULL || pid < PROCESS_FIRST_PID || pid >= PROCESS_FIRST_PID + PROCESS_MAX_PROCESSES) {
 		return -1;
@@ -217,12 +236,50 @@ void unattach_from_pipe(uint8_t id, int pid) {
 
 }
 
-void unblock_pipe_reader(uint8_t id);
+int close_pipe(uint8_t id) {
+	if (id >= MAX_PIPES || pipes[id] == NULL) {
+		return -1;
+	}
 
-int close_pipe(uint8_t id);
+	pipe_t pipe = pipes[id];
+	int is_std = (id == STDIN || id == STDOUT);
 
-void free_pipes(void);
+	if (sem_wait(pipe->mutex) == -1) {
+		return -1;
+	}
 
-void reset_pipes(void);
+	uint8_t attached = pipe->attached_count;
+	int release_waiters = (!is_std && attached <= 1);
+	int should_delete = (attached == 0) || (is_std && attached == 1);
+	int readers_to_wake = release_waiters ? sem_waiting_count(pipe->can_read) : 0;
+	int writers_to_wake = release_waiters ? sem_waiting_count(pipe->can_write) : 0;
 
-void set_next_id(uint8_t id);
+	sem_post(pipe->mutex);
+
+	while (readers_to_wake-- > 0) {
+		sem_post(pipe->can_read);
+	}
+
+	while (writers_to_wake-- > 0) {
+		sem_post(pipe->can_write);
+	}
+
+	if (should_delete) {
+		destroy_pipe(id, pipe);
+	}
+
+	return 0;
+}
+
+void reset_pipes(void) {
+	for (uint8_t i = 0; i < MAX_PIPES; i++) {
+		if (pipes[i] != NULL) {
+			destroy_pipe(i, pipes[i]);
+		}
+	}
+	next_pipe_id = 0;
+}
+
+void set_next_id(uint8_t id) {
+	next_pipe_id = id;
+}
