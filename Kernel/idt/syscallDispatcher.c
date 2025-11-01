@@ -219,12 +219,11 @@ int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if
 		return -1;
 	}
 
-	sem = mem_alloc(sizeof(sem_t));
+	sem = sem_create();
 	if (sem == NULL) {
 		return -1;
 	}
 
-	memset(sem, 0, sizeof(sem_t));
 	sem_init(sem, name, initial_count);
 	if (sem->name == NULL || sem->waiting_processes == NULL) {
 		sem_destroy(sem);

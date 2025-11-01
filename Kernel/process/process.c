@@ -228,7 +228,7 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
         pcb->name = pcb->argv[0]; // Set process name to first argument
     }
 
-    pcb->exit_sem = mem_alloc(sizeof(sem_t));
+    pcb->exit_sem = sem_create();
     if (pcb->exit_sem == NULL) {
         process_free_memory(pcb);
         return NULL;

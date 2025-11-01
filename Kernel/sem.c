@@ -31,6 +31,10 @@ static sem_t *find_registered(const char *name) {
     return NULL;
 }
 
+sem_t *sem_create(void) {
+    return mem_alloc(sizeof(sem_t));
+}
+
 sem_t *sem_find(const char *name) {
     sem_t *result = NULL;
     semLock(&registry_lock);
@@ -161,4 +165,14 @@ int sem_waiting_count(sem_t *sem) {
     }
     semUnlock(&sem->lock);
     return count;
+}
+
+int sem_get_value(sem_t *sem) {
+    if (sem == NULL) {
+        return -1;
+    }
+    semLock(&sem->lock);
+    int value = (int)sem->count;
+    semUnlock(&sem->lock);
+    return value;
 }

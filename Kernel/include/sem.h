@@ -11,11 +11,13 @@ typedef struct semaphore {
     queue_t *waiting_processes;
 } sem_t;
 
+sem_t *sem_create(void);
 void sem_init(sem_t *sem, const char *name, uint32_t initial_count);
 void sem_destroy(sem_t *sem);
 int sem_post(sem_t *sem);
 int sem_wait(sem_t *sem);
 int sem_waiting_count(sem_t *sem);
+int sem_get_value(sem_t *sem);
 
 /**
  * Finds a registered semaphore by name or NULL when not found.
