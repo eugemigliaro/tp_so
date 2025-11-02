@@ -13,6 +13,7 @@
 #include <interrupts.h>
 #include <time.h>
 #include <sem.h>
+#include <pipes.h>
 
 // extern uint8_t text;
 // extern uint8_t rodata;
@@ -67,9 +68,21 @@ int main(){
 	scheduler_init();
 	sem_init(&demo_sem, "demo_sem", 1);
 
+	init_pipes();
+
 	setFontSize(2);
 	clear();
 
+	print("Launching init process...\n");
+
+	if (add_first_process() < 0) {
+		print("Failed to create init process\n");
+		while (1) {
+			_hlt();
+		}
+	}
+
+	/*
 	print("Launching shell process...\n");
  
 	char **argv_shell = mem_alloc(sizeof(char *));
@@ -80,7 +93,7 @@ int main(){
 	} else {
 		print("Failed to create shell process\n");
 	}
-
+	*/
 	/* print("Launching quantum printing process...\n");
 
 	char **argv_quantum = mem_alloc(2 * sizeof(char *));

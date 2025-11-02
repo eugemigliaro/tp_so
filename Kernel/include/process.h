@@ -57,7 +57,8 @@ int32_t process_wait_pid(uint64_t pid);
 int32_t process_wait_children(void);
 
 pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void *entry_point);
-int32_t print_process_list(void);
+int32_t add_first_process(void);
+int32_t print_process_list(void);   
 
 void add_child(pcb_t *parent, pcb_t *child);
 

@@ -11,7 +11,7 @@
 
 typedef struct pipe * pipe_t;
 
-int init_pipes(void);
+void init_pipes(void);
 
 int open_pipe(void);
 

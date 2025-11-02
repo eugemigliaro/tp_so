@@ -9,12 +9,23 @@
 #include <queueADT.h>
 
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
+#define INIT_PROCESS_NAME "init"
+#define SHELL_PROCESS_NAME "shell"
+#define SHELL_PROCESS_ENTRY ((void *)0x400000)
+
+static void init_first_process_entry(int argc, char **argv);
+static size_t process_active_count(void);
+static int32_t reap_child_process(pcb_t *process);
+
+#define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
 
 static pcb_t *pcb_table[PROCESS_MAX_PROCESSES] = {0};
+static size_t process_count = 0;
 static int32_t running_pid = -1;    // Only one running process at a time (unicore)
 
 void process_table_init(void) {
     running_pid = -1;
+    process_count = 0;
 }
 
 pcb_t *process_lookup(uint64_t pid) {
@@ -43,6 +54,7 @@ bool process_register(pcb_t *pcb) {
         return false; // PID already in use
     }
     pcb_table[index] = pcb;
+    process_count++;
     return true;
 }
 
@@ -54,10 +66,19 @@ void process_unregister(uint64_t pid) {
     if (index >= PROCESS_MAX_PROCESSES) {
         return;
     }
-    if (pcb_table[index] != NULL && running_pid == (int32_t)pid) {
+    pcb_t *pcb = pcb_table[index];
+    if (pcb == NULL) {
+        return;
+    }
+    if (running_pid == (int32_t)pid) {
         running_pid = -1;
     }
+    unattach_from_pipe(pcb->fd_targets[STDIN], (int)pid);
+    unattach_from_pipe(pcb->fd_targets[STDOUT], (int)pid);
     pcb_table[index] = NULL;
+    if (process_count > 0) {
+        process_count--;
+    }
 }
 
 void process_set_running(pcb_t *pcb) {
@@ -197,6 +218,21 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
     pcb->argc = argc;
     pcb->children = NULL;
 
+    pcb_t *parent = NULL;
+    uint8_t stdin_target = STDIN;
+    uint8_t stdout_target = STDOUT;
+    if (ppid >= PROCESS_FIRST_PID) {
+        parent = process_lookup(ppid);
+        if (parent == NULL) {
+            process_free_memory(pcb);
+            return NULL;
+        }
+        stdin_target = parent->fd_targets[STDIN];
+        stdout_target = parent->fd_targets[STDOUT];
+    }
+    pcb->fd_targets[STDIN] = stdin_target;
+    pcb->fd_targets[STDOUT] = stdout_target;
+
     void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
     if (stack_base == NULL) {
         process_free_memory(pcb);
@@ -225,9 +261,6 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
         pcb->argv[i][strlen(argv[i])] = '\0';
     }
 
-    pcb->fd_targets[STDIN] = STDIN;
-    pcb->fd_targets[STDOUT] = STDOUT;
-
     if (pcb->argc > 0) {
         pcb->name = pcb->argv[0]; // Set process name to first argument 
     }
@@ -249,21 +282,115 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
         process_free_memory(pcb);
         return NULL;
     }
-    if (ppid >= PROCESS_FIRST_PID) {
-        pcb_t *parent = process_lookup(ppid);
-        if(parent == NULL) {
-            process_free_memory(pcb);
-            return NULL;
-        }
-        add_child(parent, pcb);
-    }   
 
-    if (!process_register(pcb)) {
+    bool stdin_attached = false;
+    bool stdout_attached = false;
+
+    if (attach_to_pipe(stdin_target) == 0) {
+        stdin_attached = true;
+    } else if (ppid >= PROCESS_FIRST_PID) {
+        process_free_memory(pcb);
+        return NULL;
+    }
+    if (attach_to_pipe(stdout_target) == 0) {
+        stdout_attached = true;
+    } else if (ppid >= PROCESS_FIRST_PID) {
+        if (stdin_attached) {
+            unattach_from_pipe(stdin_target, (int)pcb->pid);
+        }
         process_free_memory(pcb);
         return NULL;
     }
 
+    if (!process_register(pcb)) {
+        if (stdout_attached) {
+            unattach_from_pipe(stdout_target, (int)pcb->pid);
+        }
+        if (stdin_attached) {
+            unattach_from_pipe(stdin_target, (int)pcb->pid);
+        }
+        process_free_memory(pcb);
+        return NULL;
+    }
+
+    if (parent != NULL) {
+        add_child(parent, pcb);
+    }
+
     return pcb;
+}
+
+static void init_first_process_entry(int argc, char **argv) {
+    (void)argc;
+    (void)argv;
+    while (1) {
+        pcb_t *self = scheduler_current();
+        if (self != NULL && self->children != NULL && !queue_is_empty(self->children)) {
+            size_t children = queue_size(self->children);
+            for (size_t i = 0; i < children; i++) {
+                pcb_t *child = (pcb_t *)queue_pop(self->children);
+                if (child == NULL) {
+                    continue;
+                }
+                if (child->state == PROCESS_STATE_TERMINATED) {
+                    reap_child_process(child);
+                } else {
+                    queue_push(self->children, child);
+                }
+            }
+        }
+        if (self != NULL && process_active_count() <= 1) {
+            char *shell_argv[] = {SHELL_PROCESS_NAME, NULL};
+            pcb_t *shell =
+                createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
+            if (shell != NULL) {
+                scheduler_add_ready(shell);
+            }
+        }
+        if (self != NULL) {
+            self->state = PROCESS_STATE_YIELD;
+        }
+        _force_scheduler_interrupt();
+    }
+}
+int32_t add_first_process(void) {
+    int std_in = open_pipe();
+    if (std_in < 0) {
+        return -1;
+    }
+    if (std_in != STDIN) {
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    if (attach_to_pipe((uint8_t)std_in) != 0) {
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    int std_out = open_pipe();
+    if (std_out < 0) {
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    if (std_out != STDOUT) {
+        close_pipe((uint8_t)std_out);
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    if (attach_to_pipe((uint8_t)std_out) != 0) {
+        close_pipe((uint8_t)std_out);
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    char *argv[] = {INIT_PROCESS_NAME, NULL};
+    pcb_t *init_process =
+        createProcess(1, argv, 0, SCHEDULER_MAX_PRIORITY, 0, (void *)init_first_process_entry);
+    if (init_process == NULL) {
+        close_pipe((uint8_t)std_out);
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    scheduler_add_ready(init_process);
+    return (int32_t)init_process->pid;
 }
 
 int32_t print_process_list(void) {

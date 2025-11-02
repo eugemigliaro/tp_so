@@ -3,6 +3,7 @@
 #include <interrupts.h>
 #include <cursor.h>
 #include <stddef.h>
+#include <pipes.h>
 
 #define BUFFER_SIZE 1024
 
@@ -276,6 +277,8 @@ uint8_t keyboardHandler(){
             }
 
             addCharToBuffer(c, keyboard_options & SHOW_BUFFER_WHILE_TYPING);
+            uint8_t pipe_char = (uint8_t)c;
+            write_pipe(STDIN, &pipe_char, 1);
         } else if (c == BACKSPACE_KEY && to_write != to_read) {
             DEC_MOD(to_write, BUFFER_SIZE);
             clearPreviousCharacter();
