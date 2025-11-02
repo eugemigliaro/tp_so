@@ -5,6 +5,7 @@
 #include <scheduler.h>
 #include <interrupts.h>
 #include <sem.h>
+#include <pipes.h>
 #include <queueADT.h>
 
 #define PID_TO_INDEX(pid) ((pid) - PROCESS_FIRST_PID)
@@ -224,8 +225,11 @@ pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uin
         pcb->argv[i][strlen(argv[i])] = '\0';
     }
 
+    pcb->fd_targets[STDIN] = STDIN;
+    pcb->fd_targets[STDOUT] = STDOUT;
+
     if (pcb->argc > 0) {
-        pcb->name = pcb->argv[0]; // Set process name to first argument
+        pcb->name = pcb->argv[0]; // Set process name to first argument 
     }
 
     pcb->exit_sem = sem_create();

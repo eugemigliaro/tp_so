@@ -30,6 +30,7 @@ typedef struct pcb {
     char *name;
     int argc;
     char **argv;
+    uint8_t fd_targets[2];
     process_state_t state;
     uint8_t priority;
     uint8_t foreground;
