@@ -23,8 +23,6 @@ int write_pipe(uint8_t id, const uint8_t * buffer, uint64_t bytes);
 
 void unattach_from_pipe(uint8_t id, int pid);
 
-void unblock_pipe_reader(uint8_t id);
-
 int close_pipe(uint8_t id);
 
 void free_pipes(void);

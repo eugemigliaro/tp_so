@@ -176,3 +176,11 @@ int sem_get_value(sem_t *sem) {
     semUnlock(&sem->lock);
     return value;
 }
+
+int sem_remove_process(sem_t *sem, int pid) {
+    if (sem == NULL) {
+        return -1;
+    }
+
+    return queue_remove(sem->waiting_processes, (void *)pid);
+}

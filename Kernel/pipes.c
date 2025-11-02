@@ -228,12 +228,20 @@ static void destroy_pipe(uint8_t id, pipe_t pipe) {
 }
 
 void unattach_from_pipe(uint8_t id, int pid) {
-  if (id >= MAX_PIPES || pipes[id] == NULL || pid < PROCESS_FIRST_PID || pid >= PROCESS_FIRST_PID + PROCESS_MAX_PROCESSES) {
-		return -1;
+	if (id >= MAX_PIPES || pipes[id] == NULL || pid < PROCESS_FIRST_PID || pid >= PROCESS_FIRST_PID + PROCESS_MAX_PROCESSES) {
+		return;
 	}
 
-  // completar
+	pipe_t pipe = pipes[id];
 
+	sem_remove_process(pipe->can_read, pid);
+	sem_remove_process(pipe->can_write, pid);
+
+	sem_wait(pipe->mutex);
+	if (pipe->attached_count > 0) {
+		pipe->attached_count--;
+	}
+	sem_post(pipe->mutex);
 }
 
 int close_pipe(uint8_t id) {
