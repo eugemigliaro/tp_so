@@ -80,9 +80,9 @@ void sem_destroy(sem_t *sem) {
     semLock(&sem->lock);
 
     while (sem->waiting_processes != NULL && !queue_is_empty(sem->waiting_processes)) {
-        pcb_t *pcb = (pcb_t *)queue_pop(sem->waiting_processes);
-        if (pcb != NULL) {
-            process_unblock(pcb);
+        process_t *process = (process_t *)queue_pop(sem->waiting_processes);
+        if (process != NULL) {
+            process_unblock(process);
         }
     }
 
@@ -111,9 +111,9 @@ int sem_post(sem_t *sem){
         sem->count++;
         ret = 0;
     } else {
-        pcb_t *pcb = (pcb_t *)queue_pop(sem->waiting_processes);
-        if (pcb != NULL) {
-            process_unblock(pcb);
+        process_t *process = (process_t *)queue_pop(sem->waiting_processes);
+        if (process != NULL) {
+            process_unblock(process);
             ret = 0;
         }
     }
@@ -136,7 +136,7 @@ int sem_wait(sem_t *sem){
         sem->count--;
         ret = 0;
     } else {
-        pcb_t *current_process = scheduler_current();
+        process_t *current_process = scheduler_current();
         if (current_process != NULL) {
             queue_push(sem->waiting_processes, current_process);
             blocked = process_block(current_process);

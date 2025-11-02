@@ -87,7 +87,7 @@ int main(){
  
 	char **argv_shell = mem_alloc(sizeof(char *));
 	argv_shell[0] = "shell";
-	pcb_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))shellModuleAddress);
+	process_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))shellModuleAddress);
 	if (shell_process != NULL) {
 		scheduler_add_ready(shell_process);
 	} else {
@@ -101,7 +101,7 @@ int main(){
 	char *quantum_arg = mem_alloc(sizeof(char) * 6);
 	strcpy(quantum_arg, "arg1");
 	argv_quantum[1] = quantum_arg;
-	pcb_t *quantum_printing_process = createProcess(2, argv_quantum, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))process_that_prints_its_remaining_quantum);
+	process_t *quantum_printing_process = createProcess(2, argv_quantum, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))process_that_prints_its_remaining_quantum);
 	if (quantum_printing_process != NULL) {
 		scheduler_add_ready(quantum_printing_process);
 	} else {
@@ -110,7 +110,7 @@ int main(){
 
 	print("Launching semaphore demo workers...\n");
 	char *sem_worker_a_args[] = { "sem-A" };
-	pcb_t *sem_worker_a = createProcess(1, sem_worker_a_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
+	process_t *sem_worker_a = createProcess(1, sem_worker_a_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
 	if (sem_worker_a != NULL) {
 		scheduler_add_ready(sem_worker_a);
 	} else {
@@ -118,7 +118,7 @@ int main(){
 	}
 
 	char *sem_worker_b_args[] = { "sem-B" };
-	pcb_t *sem_worker_b = createProcess(1, sem_worker_b_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
+	process_t *sem_worker_b = createProcess(1, sem_worker_b_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
 	if (sem_worker_b != NULL) {
 		scheduler_add_ready(sem_worker_b);
 	} else {

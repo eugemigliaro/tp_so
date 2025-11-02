@@ -35,7 +35,7 @@ int read(int32_t fd, uint8_t *user_buffer, int32_t count) {
         return 0;
     }
 
-    pcb_t *current = scheduler_current();
+    process_t *current = scheduler_current();
     if (current == NULL) {
         return -1;
     }
@@ -52,7 +52,7 @@ int write(int32_t fd, const uint8_t *user_buffer, int32_t count) {
         return 0;
     }
 
-    pcb_t *current = scheduler_current();
+    process_t *current = scheduler_current();
     if (current == NULL) {
         return -1;
     }

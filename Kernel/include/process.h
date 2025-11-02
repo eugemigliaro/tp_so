@@ -24,9 +24,9 @@ typedef struct context{
     uint64_t rsp; // I think it is enough to store only this, since the rest are in the stack
 } context_t;
 
-typedef struct pcb {
-    uint64_t pid;
-    uint64_t ppid;
+typedef struct process {
+    uint32_t pid;
+    uint32_t ppid;
     char *name;
     int argc;
     char **argv;
@@ -40,26 +40,25 @@ typedef struct pcb {
     void *stack_base;
     sem_t *exit_sem;
     queue_t *children;
-} pcb_t;
+} process_t;
 
-pcb_t *process_lookup(uint64_t pid);
-bool process_register(pcb_t *pcb);
-void process_unregister(uint64_t pid);
+process_t *process_lookup(uint32_t pid);
+bool process_register(process_t *process);
+void process_unregister(uint32_t pid);
 void process_table_init(void);
-uint64_t get_next_pid(void);
 int32_t get_pid(void);
-void process_set_running(pcb_t *pcb);
-bool process_block(pcb_t *pcb);
-bool process_unblock(pcb_t *pcb);
-bool process_exit(pcb_t *pcb);
-void process_free_memory(pcb_t *pcb);
-int32_t process_wait_pid(uint64_t pid);
+void process_set_running(process_t *process);
+bool process_block(process_t *process);
+bool process_unblock(process_t *process);
+bool process_exit(process_t *process);
+void process_free_memory(process_t *process);
+int32_t process_wait_pid(uint32_t pid);
 int32_t process_wait_children(void);
 
-pcb_t *createProcess(int argc, char **argv, uint64_t ppid, uint8_t priority, uint8_t foreground, void *entry_point);
+process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority, uint8_t foreground, void *entry_point);
 int32_t add_first_process(void);
 int32_t print_process_list(void);   
 
-void add_child(pcb_t *parent, pcb_t *child);
+void add_child(process_t *parent, process_t *child);
 
 #endif

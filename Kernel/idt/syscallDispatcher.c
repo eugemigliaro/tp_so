@@ -73,12 +73,12 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000101: return sys_process_exit((int32_t) registers->rdi);
 		case 0x80000102: return sys_process_get_pid();
 		case 0x80000103: return sys_process_list();
-		case 0x80000104: return sys_process_kill((uint64_t) registers->rdi);
-		case 0x80000105: return sys_process_set_priority((uint64_t) registers->rdi, (uint8_t) registers->rsi);
-		case 0x80000106: return sys_process_block((uint64_t) registers->rdi);
-		case 0x80000107: return sys_process_unblock((uint64_t) registers->rdi);
+		case 0x80000104: return sys_process_kill((uint32_t) registers->rdi);
+		case 0x80000105: return sys_process_set_priority((uint32_t) registers->rdi, (uint8_t) registers->rsi);
+		case 0x80000106: return sys_process_block((uint32_t) registers->rdi);
+		case 0x80000107: return sys_process_unblock((uint32_t) registers->rdi);
 		case 0x80000108: return sys_process_yield();
-		case 0x80000109: return sys_process_wait_pid((uint64_t) registers->rdi);
+		case 0x80000109: return sys_process_wait_pid((uint32_t) registers->rdi);
 		case 0x8000010A: return sys_process_wait_children();
 		
 		default:
@@ -331,27 +331,29 @@ int32_t sys_process_list(void) {
 	return print_process_list();
 }
 
-int32_t sys_process_set_priority(uint64_t pid, uint8_t priority) {
+int32_t sys_process_set_priority(uint32_t pid, uint8_t priority) {
 	return scheduler_set_process_priority(pid, priority);
 }
 
 int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground) {
-	pcb_t *pcb = createProcess(argc, argv, (uint64_t)get_pid(), priority, foreground, entry_point);
-	if (pcb == NULL) {
+	int32_t caller_pid = get_pid();
+	uint32_t parent_pid = (caller_pid < 0) ? 0 : (uint32_t)caller_pid;
+	process_t *process = createProcess(argc, argv, parent_pid, priority, foreground, entry_point);
+	if (process == NULL) {
 		return -1;
 	}
-	scheduler_add_ready(pcb);
-	return (int32_t)pcb->pid;
+	scheduler_add_ready(process);
+	return (int32_t)process->pid;
 }
 
 int32_t sys_process_exit(int32_t status) {
-	pcb_t *pcb = scheduler_current();
+	process_t *process = scheduler_current();
 
-	if (pcb == NULL) {
+	if (process == NULL) {
 		return status;
 	}
 
-	if (!process_exit(pcb)) {
+	if (!process_exit(process)) {
         status = -1;
     }
 
@@ -359,33 +361,33 @@ int32_t sys_process_exit(int32_t status) {
 }
 
 
-int32_t sys_process_block(uint64_t pid) {
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+int32_t sys_process_block(uint32_t pid) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         return -1;
     }
-    if (!process_block(pcb)) {
+    if (!process_block(process)) {
         return -1;
     }
     _force_scheduler_interrupt();
     return 0;
 }
 
-int32_t sys_process_unblock(uint64_t pid) {
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+int32_t sys_process_unblock(uint32_t pid) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         return -1;
     }
-    return process_unblock(pcb) ? 0 : -1;
+    return process_unblock(process) ? 0 : -1;
 }
 
-int32_t sys_process_kill(uint64_t pid) {
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+int32_t sys_process_kill(uint32_t pid) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         return -1;
     }
 
-    if (!process_exit(pcb)) {
+    if (!process_exit(process)) {
         return -1;
     }
 
@@ -393,15 +395,15 @@ int32_t sys_process_kill(uint64_t pid) {
 }
 
 int32_t sys_process_yield(void) {
-	pcb_t *pcb = scheduler_current();
-	if (pcb != NULL) {
-		pcb->state = PROCESS_STATE_YIELD;
+	process_t *process = scheduler_current();
+	if (process != NULL) {
+		process->state = PROCESS_STATE_YIELD;
 	}
 	_force_scheduler_interrupt();
 	return 0;
 }
 
-int32_t sys_process_wait_pid(uint64_t pid) {
+int32_t sys_process_wait_pid(uint32_t pid) {
 	return process_wait_pid(pid);
 }
 
