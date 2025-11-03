@@ -61,4 +61,8 @@ int32_t print_process_list(void);
 
 void add_child(process_t *parent, process_t *child);
 
+int getForegroundProcessPid(void);
+int setForegroundOwnership(bool wantsForeground);
+
+
 #endif

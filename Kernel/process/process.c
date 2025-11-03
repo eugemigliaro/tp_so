@@ -15,6 +15,8 @@
 static void init_first_process_entry(int argc, char **argv);
 static size_t process_active_count(void);
 static int32_t reap_child_process(process_t *process);
+static int setForeGroundProcessPid(int32_t pid, bool wantsForeground);
+
 
 typedef struct pcb {
     process_t *processes[PROCESS_MAX_PROCESSES];
@@ -599,3 +601,49 @@ void add_child(process_t *parent, process_t *child) {
 
     queue_push(parent->children, (void *)child);
 }
+
+static int setForeGroundProcessPid(int32_t pid, bool wantsForeground) { //falta ver si ceder las special keys
+    
+
+    if (pcb == NULL) {
+        return -1;
+    }
+
+    process_t * process = process_lookup(pid);
+
+    if (process == NULL) {
+        return -1;
+    }
+    
+    if (wantsForeground) {
+        pcb->foreground_pid = pid;
+        return 0;
+    }
+
+    process_t * parent_process = process_lookup(process->ppid);
+
+    if (parent_process == NULL || pid != pcb->foreground_pid) {
+        return -1;
+    }
+
+    pcb->foreground_pid = parent_process->pid;
+    return 0;
+} 
+
+
+int setForegroundOwnership(bool wantsForeground) { // ver si un proceso puede tener foreground arbitrariamente o si debe haber un criterio para menejar ese caso
+
+    _cli();
+    int32_t pid = pcb->running_pid;
+    _sti();
+
+    if (pid == -1) {
+        return -1;
+    }
+
+    return setForeGroundProcessPid(pid, wantsForeground);
+
+}
+
+int getForegroundProcessPid(void) { return pcb->foreground_pid; }
+
