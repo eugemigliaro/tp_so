@@ -15,7 +15,6 @@
 static void init_first_process_entry(int argc, char **argv);
 static size_t process_active_count(void);
 static int32_t reap_child_process(process_t *process);
-static int set_foreground_by_pid(int32_t pid, bool wantsForeground);
 static int shell_created = 0;
 
 
@@ -186,8 +185,8 @@ bool process_exit(process_t *process) {
     }
     process->state = PROCESS_STATE_TERMINATED;
 
-    if (pcb->foreground_pid == process->pid) {
-        set_foreground_by_pid(process->ppid, false);
+    if (pcb != NULL && pcb->foreground_pid == (int32_t)process->pid) {
+        pcb->foreground_pid = (int32_t)process->ppid;
     }
 
     sem_post(process->exit_sem);
@@ -355,7 +354,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     }
 
     if (foreground) {
-        set_foreground_by_pid(process->pid, true);
+        pcb->foreground_pid = (int32_t)process->pid;
     }
 
     if (!process_register(process)) {
@@ -612,47 +611,30 @@ void add_child(process_t *parent, process_t *child) {
     queue_push(parent->children, (void *)child);
 }
 
-static int set_foreground_by_pid(int32_t pid, bool wantsForeground) { //falta ver si ceder las special keys, si es asi el scheduler tiene que reabilitarselas
-    
-
+int give_foreground_to(uint32_t target_pid) {
     if (pcb == NULL) {
         return -1;
     }
 
-    process_t * process = process_lookup(pid);
-
-    if (process == NULL) {
-        return -1;
-    }
-    
-    if (wantsForeground) {
-        pcb->foreground_pid = pid;
-        return 0;
-    }
-
-    process_t * parent_process = process_lookup(process->ppid);
-
-    if (parent_process == NULL || pid != pcb->foreground_pid) {
-        return -1;
-    }
-
-    pcb->foreground_pid = parent_process->pid;
-    return 0;
-} 
-
-
-int set_foreground_Owner(bool wantsForeground) { // ver si un proceso puede tener foreground arbitrariamente o si debe haber un criterio para menejar ese caso
-
     _cli();
-    int32_t pid = pcb->running_pid;
+    int32_t current_pid = pcb->running_pid;
     _sti();
 
-    if (pid == -1) {
+    if (current_pid == -1) {
         return -1;
     }
 
-    return set_foreground_by_pid(pid, wantsForeground);
+    if (pcb->foreground_pid != current_pid) {
+        return -1;
+    }
 
+    process_t *target = process_lookup(target_pid);
+    if (target == NULL) {
+        return -1;
+    }
+
+    pcb->foreground_pid = (int32_t)target_pid;
+    return 0;
 }
 
 int get_foreground_process_pid(void) { 
