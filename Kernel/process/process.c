@@ -16,6 +16,7 @@ static void init_first_process_entry(int argc, char **argv);
 static size_t process_active_count(void);
 static int32_t reap_child_process(process_t *process);
 static int set_foreground_by_pid(int32_t pid, bool wantsForeground);
+static int shell_created = 0;
 
 
 typedef struct pcb {
@@ -378,6 +379,20 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
 static void init_first_process_entry(int argc, char **argv) {
     (void)argc;
     (void)argv;
+    
+    if (!shell_created) {
+        process_t *self = scheduler_current();
+        if (self != NULL) {
+            char *shell_argv[] = {SHELL_PROCESS_NAME, NULL};
+            process_t *shell =
+                createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
+            if (shell != NULL) {
+                scheduler_add_ready(shell);
+                shell_created = 1;
+            }
+        }
+    }
+
     while (1) {
         process_t *self = scheduler_current();
         if (self != NULL && self->children != NULL && !queue_is_empty(self->children)) {
@@ -394,18 +409,6 @@ static void init_first_process_entry(int argc, char **argv) {
                 }
             }
         }
-        if (self != NULL && process_active_count() <= 1) {
-            char *shell_argv[] = {SHELL_PROCESS_NAME, NULL};
-            process_t *shell =
-                createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
-            if (shell != NULL) {
-                scheduler_add_ready(shell);
-            }
-        }
-        if (self != NULL) {
-            self->state = PROCESS_STATE_YIELD;
-        }
-        _force_scheduler_interrupt();
     }
 }
 int32_t add_first_process(void) {
