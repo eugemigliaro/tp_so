@@ -33,7 +33,6 @@ typedef struct process {
     uint8_t fd_targets[2];
     process_state_t state;
     uint8_t priority;
-    uint8_t foreground;
     context_t context; //should this be a pointer?
     uint8_t remaining_quantum;
     uint8_t last_quantum_ticks;
@@ -61,8 +60,8 @@ int32_t print_process_list(void);
 
 void add_child(process_t *parent, process_t *child);
 
-int getForegroundProcessPid(void);
-int setForegroundOwnership(bool wantsForeground);
+int get_foreground_process_pid(void);
+int set_foreground_Owner(bool wantsForeground);
 
 
 #endif

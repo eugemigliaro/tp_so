@@ -27,17 +27,22 @@ int setWriteTarget(uint8_t fd_targets[2], uint8_t target) {
 }
 
 int read(int32_t fd, uint8_t *user_buffer, int32_t count) {
+
+    _cli();
+    process_t *current = scheduler_current();
+    _sti();
+
+    if (current == NULL) {
+        return -1;
+    }
+
     if (user_buffer == NULL || count < 0 || !is_valid_fd(fd)) {
         return -1;
     }
 
-    if (count == 0) {
-        return 0;
-    }
+    if (current->fd_targets[READ_FD] == STDIN && get_foreground_process_pid() != current->pid) {
+        return -1; //lo deberia matar?
 
-    process_t *current = scheduler_current();
-    if (current == NULL) {
-        return -1;
     }
 
     return read_pipe(current->fd_targets[fd], user_buffer, (uint64_t)count);

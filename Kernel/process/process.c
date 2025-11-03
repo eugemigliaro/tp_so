@@ -15,7 +15,7 @@
 static void init_first_process_entry(int argc, char **argv);
 static size_t process_active_count(void);
 static int32_t reap_child_process(process_t *process);
-static int setForeGroundProcessPid(int32_t pid, bool wantsForeground);
+static int set_foreground_by_pid(int32_t pid, bool wantsForeground);
 
 
 typedef struct pcb {
@@ -185,9 +185,13 @@ bool process_exit(process_t *process) {
     }
     process->state = PROCESS_STATE_TERMINATED;
 
+    if (pcb->foreground_pid == process->pid) {
+        set_foreground_by_pid(process->ppid, false);
+    }
+
     sem_post(process->exit_sem);
 
-    _force_scheduler_interrupt();
+    _force_scheduler_interrupt(); //no deberia hacerlo si solo si el proceso estaba en running?
 
     return true;
 }
@@ -259,7 +263,6 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->pid = pid;
     process->ppid = ppid;
     process->priority = priority;
-    process->foreground = foreground;
     process->state = PROCESS_STATE_READY;
     process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     process->last_quantum_ticks = 0;
@@ -348,6 +351,10 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
         }
         process_free_memory(process);
         return NULL;
+    }
+
+    if (foreground) {
+        set_foreground_by_pid(process->pid, true);
     }
 
     if (!process_register(process)) {
@@ -473,7 +480,7 @@ int32_t print_process_list(void) {
         print(" | Priority: ");
         printDec(process->priority);
         print(" | Foreground: ");
-        print(process->foreground ? "yes" : "no");
+        print(pcb->foreground_pid == (int32_t)process->pid ? "yes" : "no");
         print(" | Running: ");
         print(process->pid == (uint32_t)current_pid ? "yes" : "no");
         newLine();
@@ -602,7 +609,7 @@ void add_child(process_t *parent, process_t *child) {
     queue_push(parent->children, (void *)child);
 }
 
-static int setForeGroundProcessPid(int32_t pid, bool wantsForeground) { //falta ver si ceder las special keys
+static int set_foreground_by_pid(int32_t pid, bool wantsForeground) { //falta ver si ceder las special keys, si es asi el scheduler tiene que reabilitarselas
     
 
     if (pcb == NULL) {
@@ -631,7 +638,7 @@ static int setForeGroundProcessPid(int32_t pid, bool wantsForeground) { //falta 
 } 
 
 
-int setForegroundOwnership(bool wantsForeground) { // ver si un proceso puede tener foreground arbitrariamente o si debe haber un criterio para menejar ese caso
+int set_foreground_Owner(bool wantsForeground) { // ver si un proceso puede tener foreground arbitrariamente o si debe haber un criterio para menejar ese caso
 
     _cli();
     int32_t pid = pcb->running_pid;
@@ -641,9 +648,15 @@ int setForegroundOwnership(bool wantsForeground) { // ver si un proceso puede te
         return -1;
     }
 
-    return setForeGroundProcessPid(pid, wantsForeground);
+    return set_foreground_by_pid(pid, wantsForeground);
 
 }
 
-int getForegroundProcessPid(void) { return pcb->foreground_pid; }
-
+int get_foreground_process_pid(void) { 
+    
+    if (pcb == NULL) {
+        return -1;
+    }
+    
+    return pcb->foreground_pid; 
+}

@@ -89,5 +89,6 @@ int32_t sys_process_unblock(uint32_t pid);
 int32_t sys_process_yield(void);
 int32_t sys_process_wait_pid(uint32_t pid);
 int32_t sys_process_wait_children(void);
+int32_t sys_process_set_foreground(uint64_t wantsForeground);
 
 #endif
