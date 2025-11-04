@@ -196,5 +196,5 @@ int sem_remove_process(sem_t *sem, int pid) {
         return -1;
     }
 
-    return queue_remove(sem->waiting_processes, (void *)pid);
+    return queue_remove(sem->waiting_processes, (void *)(uintptr_t)pid);
 }
