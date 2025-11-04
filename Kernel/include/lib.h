@@ -2,6 +2,7 @@
 #define LIB_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <fonts.h>
 
 #define EOF -1
@@ -23,5 +24,7 @@ void semLock(uint8_t *lock);
 void semUnlock(uint8_t *lock);
 
 void _force_scheduler_interrupt(void);
+
+int32_t print_mem_status_common(size_t total, size_t used, size_t available);
 
 #endif

@@ -184,3 +184,26 @@ int sem_remove_process(sem_t *sem, int pid) {
 
     return queue_remove(sem->waiting_processes, (void *)pid);
 }
+
+int sem_set_value(sem_t *sem, uint32_t new_value) {
+    if (sem == NULL) {
+        return -1;
+    }
+
+    semLock(&sem->lock);
+    uint32_t current = sem->count;
+    semUnlock(&sem->lock);
+
+    if (new_value > current) {
+        uint32_t delta = new_value - current;
+        for (uint32_t i = 0; i < delta; i++) {
+            sem_post(sem);
+        }
+    } else if (new_value < current) {
+        semLock(&sem->lock);
+        sem->count = new_value;
+        semUnlock(&sem->lock);
+    }
+
+    return 0;
+}

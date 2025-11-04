@@ -3,9 +3,53 @@
 #include <process.h>
 #include <scheduler.h>
 #include <fonts.h>
+#include <interrupts.h>
 
 static int is_valid_fd(int32_t fd) {
     return fd == READ_FD || fd == WRITE_FD;
+}
+
+int set_fd_targets(uint8_t read_target, uint8_t write_target) {
+    _cli();
+    process_t *current = scheduler_current();
+    _sti();
+
+    if (current == NULL) {
+        return -1;
+    }
+
+    uint8_t old_read = current->fd_targets[0];
+    uint8_t old_write = current->fd_targets[1];
+
+    int attached_read = 0;
+    int attached_write = 0;
+
+    if (read_target != old_read) {
+        if (attach_to_pipe(read_target) != 0) {
+            return -1;
+        }
+        attached_read = 1;
+    }
+    if (write_target != old_write) {
+        if (attach_to_pipe(write_target) != 0) {
+            if (attached_read) {
+                unattach_from_pipe(read_target, (int)current->pid);
+            }
+            return -1;
+        }
+        attached_write = 1;
+    }
+
+    if (read_target != old_read) {
+        setReadTarget(current->fd_targets, read_target);
+        unattach_from_pipe(old_read, (int)current->pid);
+    }
+    if (write_target != old_write) {
+        setWriteTarget(current->fd_targets, write_target);
+        unattach_from_pipe(old_write, (int)current->pid);
+    }
+
+    return 0;
 }
 
 int setReadTarget(uint8_t fd_targets[2], uint8_t target) {
@@ -57,7 +101,10 @@ int write(int32_t fd, const uint8_t *user_buffer, int32_t count) {
         return 0;
     }
 
+    _cli();
     process_t *current = scheduler_current();
+    _sti();
+
     if (current == NULL) {
         return -1;
     }

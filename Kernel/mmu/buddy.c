@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <memoryManager.h>
 #include <interrupts.h>
+#include <lib.h>
 
 #define HEAP_ORDER_MIN 5
 #define HEAP_ORDER_MAX 19
@@ -239,4 +240,10 @@ void mem_status(size_t *total, size_t *used, size_t *available) {
         *used = HEAP_SIZE - free_total;
     }
     _sti();
+}
+
+int32_t print_mem_status(void) {
+    size_t total = 0, used = 0, available = 0;
+    mem_status(&total, &used, &available);
+    return print_mem_status_common(total, used, available);
 }

@@ -42,6 +42,7 @@ int32_t sys_clear_screen(void);
 int32_t sys_clear_input_buffer(void);
 uint16_t sys_window_width(void);
 uint16_t sys_window_height(void);
+int32_t sys_mem_status_print(void);
 
 // Date syscall prototypes
 int32_t sys_hour(int * hour);
@@ -61,6 +62,7 @@ int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if
 int32_t sys_sem_close(sem_t *sem);
 int32_t sys_sem_wait(sem_t *sem);
 int32_t sys_sem_post(sem_t *sem);
+int32_t sys_sem_set_value(sem_t *sem, uint32_t new_value);
 
 // Custom exec syscall prototype
 int32_t sys_exec(int32_t (*fnPtr)(void));
@@ -90,5 +92,9 @@ int32_t sys_process_yield(void);
 int32_t sys_process_wait_pid(uint32_t pid);
 int32_t sys_process_wait_children(void);
 int32_t sys_process_give_foreground(uint64_t target_pid);
+
+// Pipes and FD target syscalls
+int32_t sys_open_pipe(void);
+int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target);
 
 #endif

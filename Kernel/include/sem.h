@@ -19,6 +19,7 @@ int sem_wait(sem_t *sem);
 int sem_waiting_count(sem_t *sem);
 int sem_get_value(sem_t *sem);
 int sem_remove_process(sem_t *sem, int pid);
+int sem_set_value(sem_t *sem, uint32_t new_value);
 
 /**
  * Finds a registered semaphore by name or NULL when not found.

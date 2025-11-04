@@ -49,3 +49,17 @@ void * memcpy(void * destination, const void * source, uint64_t length)
 
 	return destination;
 }
+
+int32_t print_mem_status_common(size_t total, size_t used, size_t available) {
+    print("=== Memory Status ===\n");
+    print("Total: ");
+    printDec((uint64_t)total);
+    newLine();
+    print("Used:  ");
+    printDec((uint64_t)used);
+    newLine();
+    print("Free:  ");
+    printDec((uint64_t)available);
+    newLine();
+    return 0;
+}
