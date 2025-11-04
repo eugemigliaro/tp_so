@@ -3,8 +3,6 @@
 #include <string.h>
 #include <memoryManager.h>
 #include <process.h>
-#include <lib.h>
-#include <stdbool.h>
 
 #define SEM_NAME_LENGTH 9
 #define NEXT_PIPE_ID(pipe) ((pipe)->id + 1) % MAX_PIPES
@@ -182,8 +180,6 @@ int write_pipe(uint8_t id, const uint8_t * buffer, uint64_t bytes) {
 
 	pipe_t pipe = pipes[id];
 	uint64_t written_bytes = 0;
-	bool signaled_reader = false;
-
 
 	while (written_bytes < bytes) {
 		sem_wait(pipe->mutex);
@@ -204,18 +200,11 @@ int write_pipe(uint8_t id, const uint8_t * buffer, uint64_t bytes) {
 		pipe->buffer[pipe->write_idx] = buffer[written_bytes];
 		pipe->write_idx = NEXT_BUFFER_IDX(pipe->write_idx);
 		pipe->data_count++;
-		if (pipe->waiting_readers > 0) {
-			signaled_reader = true;
-		}
 
 		sem_post(pipe->mutex);
 		sem_post(pipe->can_read);
 
 		written_bytes++;
-		if (signaled_reader) {
-			_force_scheduler_interrupt();
-			signaled_reader = false;
-		}
 	}
 
 	return (int)written_bytes;

@@ -6,9 +6,14 @@
 #include <strings.h>
 #include <process.h>
 #include <scheduler.h>
+#include <interrupts.h>
 
 static queue_t *registered_semaphores = NULL;
 static uint8_t registry_lock = 0;
+
+static bool timer_tick_is_disabled(void) {
+    return (picMasterGetMask() & 0x01) != 0;
+}
 
 static void ensure_registry(void) {
     if (registered_semaphores == NULL) {
@@ -101,6 +106,7 @@ void sem_destroy(sem_t *sem) {
 
 int sem_post(sem_t *sem){
     int ret = -1;
+    bool should_force_scheduler = false;
     if(sem == NULL){
         return ret;
     }
@@ -113,12 +119,20 @@ int sem_post(sem_t *sem){
     } else {
         process_t *process = (process_t *)queue_pop(sem->waiting_processes);
         if (process != NULL) {
-            process_unblock(process);
+            should_force_scheduler = process_unblock(process);
             ret = 0;
         }
     }
 
     semUnlock(&sem->lock);
+
+    if (should_force_scheduler && timer_tick_is_disabled()) {
+        process_t *current = scheduler_current();
+        if (current != NULL) {
+            current->remaining_quantum = 0;
+        }
+        _force_scheduler_interrupt();
+    }
 
     return ret;
 }

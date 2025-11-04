@@ -4,6 +4,7 @@ GLOBAL _hlt
 
 GLOBAL picMasterMask
 GLOBAL picSlaveMask
+GLOBAL picMasterGetMask
 
 GLOBAL _irq00Handler
 GLOBAL _irq01Handler
@@ -157,6 +158,11 @@ picSlaveMask:
 
 	mov rsp, rbp
 	pop rbp
+	ret
+
+picMasterGetMask:
+	in al, 0x21
+	movzx rax, al
 	ret
 
 ; 8254 Timer (Timer Tick)

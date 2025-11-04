@@ -25,6 +25,8 @@ void picMasterMask(uint8_t mask);
 
 void picSlaveMask(uint8_t mask);
 
+uint8_t picMasterGetMask(void);
+
 #define TIMER_PIC_MASTER 0xFE
 #define KEYBOARD_PIC_MASTER 0xFD
 #define NO_INTERRUPTS 0xFF
