@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <tests/test_processes.h>
+#include <test.h>
 #include <sys.h>
 
 enum process_test_state {
