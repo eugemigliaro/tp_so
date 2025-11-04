@@ -30,7 +30,7 @@ typedef struct process {
     char *name;
     int argc;
     char **argv;
-    uint8_t fd_targets[2];
+    uint8_t fd_targets[3];
     process_state_t state;
     uint8_t priority;
     context_t context; //should this be a pointer?

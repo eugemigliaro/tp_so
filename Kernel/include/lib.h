@@ -9,6 +9,7 @@
 void * memset(void * destination, int32_t character, uint64_t length);
 void * memcpy(void * destination, const void * source, uint64_t length);
 void printf(const char * string);
+uint32_t uint_to_base(uint64_t value, char *buffer, uint32_t base);
 
 uint8_t getKeyboardBuffer(void);
 uint8_t getKeyboardStatus(void);

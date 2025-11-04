@@ -6,10 +6,10 @@
 #include <interrupts.h>
 
 static int is_valid_fd(int32_t fd) {
-    return fd == READ_FD || fd == WRITE_FD;
+    return fd == READ_FD || fd == WRITE_FD || fd == ERROR_FD;
 }
 
-int setReadTarget(uint8_t fd_targets[2], uint8_t target) {
+int setReadTarget(uint8_t fd_targets[3], uint8_t target) {
     if (fd_targets == NULL) {
         return -1;
     }
@@ -18,7 +18,7 @@ int setReadTarget(uint8_t fd_targets[2], uint8_t target) {
     return 0;
 }
 
-int setWriteTarget(uint8_t fd_targets[2], uint8_t target) {
+int setWriteTarget(uint8_t fd_targets[3], uint8_t target) {
     if (fd_targets == NULL) {
         return -1;
     }
@@ -67,18 +67,21 @@ int write(int32_t fd, const uint8_t *user_buffer, int32_t count) {
         return -1;
     }
 
-    int written = write_pipe(current->fd_targets[fd], user_buffer, (uint64_t)count);
+    int pipe_id = current->fd_targets[fd];
+    int written = write_pipe(pipe_id, user_buffer, (uint64_t)count);
     if (written < 0) {
         return written;
     }
 
-    if (fd == WRITE_FD && current->fd_targets[WRITE_FD] == STDOUT) {
+    if ((fd == WRITE_FD && current->fd_targets[WRITE_FD] == STDOUT) ||
+        (fd == ERROR_FD && current->fd_targets[ERROR_FD] == STDERR)) {
         for (int i = 0; i < written; i++) {
             uint8_t c;
-            if (read_pipe(current->fd_targets[fd], &c, 1) == -1) {
+            if (read_pipe(pipe_id, &c, 1) == -1) {
                 return -1;
             }
-            putChar(c);
+            const char out_char = (char)c;
+            printToFd(pipe_id, &out_char, 1);
         }
     }
 

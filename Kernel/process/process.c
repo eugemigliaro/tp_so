@@ -99,6 +99,7 @@ void process_unregister(uint32_t pid) {
 
     unattach_from_pipe(process->fd_targets[STDIN], (int)pid);
     unattach_from_pipe(process->fd_targets[STDOUT], (int)pid);
+    unattach_from_pipe(process->fd_targets[STDERR], (int)pid);
 
     pcb->processes[index] = NULL;
     if (pcb->process_count > 0) {
@@ -272,6 +273,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process_t *parent = NULL;
     uint8_t stdin_target = STDIN;
     uint8_t stdout_target = STDOUT;
+    uint8_t stderr_target = STDERR;
     if (ppid >= PROCESS_FIRST_PID) {
         parent = process_lookup(ppid);
         if (parent == NULL) {
@@ -280,9 +282,11 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
         }
         stdin_target = parent->fd_targets[STDIN];
         stdout_target = parent->fd_targets[STDOUT];
+        stderr_target = parent->fd_targets[STDERR];
     }
     process->fd_targets[STDIN] = stdin_target;
     process->fd_targets[STDOUT] = stdout_target;
+    process->fd_targets[STDERR] = stderr_target;
 
     void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
     if (stack_base == NULL) {
@@ -336,6 +340,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
 
     bool stdin_attached = false;
     bool stdout_attached = false;
+    bool stderr_attached = false;
 
     if (attach_to_pipe(stdin_target) == 0) {
         stdin_attached = true;
@@ -353,11 +358,27 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
         return NULL;
     }
 
+    if (attach_to_pipe(stderr_target) == 0) {
+        stderr_attached = true;
+    } else if (ppid >= PROCESS_FIRST_PID) {
+        if (stdout_attached) {
+            unattach_from_pipe(stdout_target, (int)process->pid);
+        }
+        if (stdin_attached) {
+            unattach_from_pipe(stdin_target, (int)process->pid);
+        }
+        process_free_memory(process);
+        return NULL;
+    }
+
     if (foreground) {
         pcb->foreground_pid = (int32_t)process->pid;
     }
 
     if (!process_register(process)) {
+        if (stderr_attached) {
+            unattach_from_pipe(stderr_target, (int)process->pid);
+        }
         if (stdout_attached) {
             unattach_from_pipe(stdout_target, (int)process->pid);
         }
@@ -438,10 +459,29 @@ int32_t add_first_process(void) {
         close_pipe((uint8_t)std_in);
         return -1;
     }
+    int std_err = open_pipe();
+    if (std_err < 0) {
+        close_pipe((uint8_t)std_out);
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    if (std_err != STDERR) {
+        close_pipe((uint8_t)std_err);
+        close_pipe((uint8_t)std_out);
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
+    if (attach_to_pipe((uint8_t)std_err) != 0) {
+        close_pipe((uint8_t)std_err);
+        close_pipe((uint8_t)std_out);
+        close_pipe((uint8_t)std_in);
+        return -1;
+    }
     char *argv[] = {INIT_PROCESS_NAME, NULL};
     process_t *init_process =
         createProcess(1, argv, 0, SCHEDULER_MAX_PRIORITY, 0, (void *)init_first_process_entry);
     if (init_process == NULL) {
+        close_pipe((uint8_t)std_err);
         close_pipe((uint8_t)std_out);
         close_pipe((uint8_t)std_in);
         return -1;

@@ -8,6 +8,7 @@
 
 #define STDIN 0
 #define STDOUT 1
+#define STDERR 2
 
 typedef struct pipe * pipe_t;
 
@@ -32,4 +33,3 @@ void reset_pipes(void);
 void set_next_id(uint8_t id);
 
 #endif
-

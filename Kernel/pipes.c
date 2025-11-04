@@ -250,7 +250,7 @@ int close_pipe(uint8_t id) {
 	}
 
 	pipe_t pipe = pipes[id];
-	int is_std = (id == STDIN || id == STDOUT);
+	int is_std = (id == STDIN || id == STDOUT || id == STDERR);
 
 	if (sem_wait(pipe->mutex) == -1) {
 		return -1;
