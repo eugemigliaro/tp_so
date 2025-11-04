@@ -95,19 +95,9 @@ enum KEYS {
 
 typedef void (*SpecialKeyHandler)(enum KEYS scancode);
 
-enum KEYBOARD_OPTIONS {
-    SHOW_BUFFER_WHILE_TYPING = 0b00000001,
-    AWAIT_RETURN_KEY = 0b00000010,
-    MODIFY_BUFFER = 0b00000100
-};
-
-int8_t getKeyboardCharacter(enum KEYBOARD_OPTIONS keyboard_options);
-void addCharToBuffer(int8_t ascii, uint8_t showOutput);
-uint16_t clearBuffer();
 uint8_t keyboardHandler();
 
 // All special keys *EXCEPT* for TAB and RETURN can be registered
-// Printable keys, including tab (`\t`) and return (`\n`) can be obtained via `getKeyboardCharacter` (`getchar`/`sys_read`)
 uint8_t registerSpecialKey(enum KEYS scancode, SpecialKeyHandler fn, uint8_t registeredFromKernel);
 void clearKeyFnMapNonKernel(SpecialKeyHandler * map);
 void restoreKeyFnMapNonKernel(SpecialKeyHandler * map);

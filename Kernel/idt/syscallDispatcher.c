@@ -10,6 +10,8 @@
 #include <scheduler.h>
 #include <memoryManager.h>
 #include <sem.h>
+#include <fd.h>
+#include <pipes.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
@@ -33,7 +35,7 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000008: return sys_fonts_increase_size();
 		case 0x80000009: return sys_fonts_set_size((uint8_t) registers->rdi);
 		case 0x8000000A: return sys_clear_screen();
-		case 0x8000000B: return sys_clear_input_buffer();
+		case 0x8000000B: return sys_clear_screen_character();
 
 		case 0x80000010: return sys_hour((int *) registers->rdi);
 		case 0x80000011: return sys_minute((int *) registers->rdi);
@@ -55,8 +57,6 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x800000D0: return sys_sleep_milis(registers->rdi);
 
 		case 0x800000E0: return sys_get_register_snapshot((int64_t *) registers->rdi);
-
-	case 0x800000F0: return sys_get_character_without_display();
 
 	case 0x80000120: return sys_sem_open((const char *) registers->rdi, (uint32_t) registers->rsi, (uint8_t) registers->rdx);
 	case 0x80000121: return sys_sem_close((sem_t *) registers->rdi);
@@ -92,16 +92,11 @@ int64_t syscallDispatcher(Registers * registers) {
 // ==================================================================
 
 int32_t sys_write(int32_t fd, char * __user_buf, int32_t count) {
-    return printToFd(fd, __user_buf, count);
+    return write(fd, (const uint8_t *) __user_buf, count);
 }
 
 int32_t sys_read(int32_t fd, signed char * __user_buf, int32_t count) {
-	int32_t i;
-	int8_t c;
-	for(i = 0; i < count && (c = getKeyboardCharacter(AWAIT_RETURN_KEY | SHOW_BUFFER_WHILE_TYPING)) != EOF; i++){
-		*(__user_buf + i) = c;
-	}
-    return i;
+    return read(fd, (uint8_t *) __user_buf, count);
 }
 
 // ==================================================================
@@ -145,8 +140,8 @@ int32_t sys_clear_screen(void) {
 	return 0;
 }
 
-int32_t sys_clear_input_buffer(void) {
-	while(clearBuffer() != 0);
+int32_t sys_clear_screen_character(void) {
+	clearPreviousCharacter();
 	return 0;
 }
 
@@ -314,10 +309,6 @@ int32_t sys_get_register_snapshot(int64_t * registers) {
 	}
 
 	return 1;
-}
-
-int32_t sys_get_character_without_display(void) {
-	return getKeyboardCharacter(0);
 }
 
 // ==================================================================

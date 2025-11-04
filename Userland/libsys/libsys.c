@@ -39,8 +39,8 @@ void clearScreen(void) {
     sys_clear_screen();
 }
 
-void clearInputBuffer(void) {
-    sys_clear_input_buffer();
+void clearScreenCharacter(void) {
+    sys_clear_screen_character();
 }
 
 void drawCircle(uint32_t color, long long int topleftX, long long int topLefyY, long long int diameter) {
@@ -78,10 +78,6 @@ void sleep(uint32_t miliseconds) {
 
 int32_t getRegisterSnapshot(int64_t * registers) {
     return sys_get_register_snapshot(registers);
-}
-
-int32_t getCharacterWithoutDisplay(void) {
-    return sys_get_character_without_display();
 }
 
 int32_t processCreate(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground) {

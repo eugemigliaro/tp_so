@@ -26,7 +26,7 @@ int32_t sys_fonts_set_size(uint8_t size);
 /* 0x8000000A */
 int32_t sys_clear_screen(void);
 /* 0x8000000B */
-int32_t sys_clear_input_buffer(void);
+int32_t sys_clear_screen_character(void);
 
 // Date syscall prototypes
 /* 0x80000010 */
@@ -73,7 +73,5 @@ int32_t sys_window_height(void);
 int32_t sys_sleep_milis(uint32_t milis);
 
 int32_t sys_get_register_snapshot(int64_t * registers);
-
-int32_t sys_get_character_without_display(void);
 
 #endif

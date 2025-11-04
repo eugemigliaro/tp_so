@@ -39,7 +39,7 @@ int32_t sys_fonts_decrease_size(void);
 int32_t sys_fonts_increase_size(void);
 int32_t sys_fonts_set_size(uint8_t size);
 int32_t sys_clear_screen(void);
-int32_t sys_clear_input_buffer(void);
+int32_t sys_clear_screen_character(void);
 uint16_t sys_window_width(void);
 uint16_t sys_window_height(void);
 
@@ -73,9 +73,6 @@ int32_t sys_sleep_milis(uint32_t milis);
 
 // Register snapshot
 int32_t sys_get_register_snapshot(int64_t * registers);
-
-// Get character without showing
-int32_t sys_get_character_without_display(void);
 
 // Process management syscalls
 int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground);

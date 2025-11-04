@@ -3,6 +3,7 @@
 #include <process.h>
 #include <scheduler.h>
 #include <fonts.h>
+#include <interrupts.h>
 
 static int is_valid_fd(int32_t fd) {
     return fd == READ_FD || fd == WRITE_FD;
@@ -50,6 +51,10 @@ int read(int32_t fd, uint8_t *user_buffer, int32_t count) {
 
 int write(int32_t fd, const uint8_t *user_buffer, int32_t count) {
     if (user_buffer == NULL || count < 0 || !is_valid_fd(fd)) {
+        return -1;
+    }
+
+    if (fd == READ_FD) {
         return -1;
     }
 

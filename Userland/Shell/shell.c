@@ -15,8 +15,6 @@
     #include <ansiColors.h>
 #endif
 
-static void * const snakeModuleAddress = (void*)0x500000;
-
 #define MAX_BUFFER_SIZE 1024
 #define HISTORY_SIZE 10
 
@@ -35,7 +33,6 @@ int font(void);
 int help(void);
 int history(void);
 int man(void);
-int snake(void);
 int regs(void);
 int time(void);
 int testmm(void);
@@ -45,6 +42,9 @@ int testsemaphore(void);
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode);
 static void printNextCommand(enum REGISTERABLE_KEYS scancode);
+static void appendCharacter(char c);
+static void deleteCharacter(void);
+static void emptyScreenBuffer(void);
 
 static uint8_t last_command_arrowed = 0;
 
@@ -66,7 +66,6 @@ Command commands[] = {
     { .name = "invop",          .function = (int (*)(void))(unsigned long long)_invalidopcode,  .description = "Generates an invalid Opcode exception" },
     { .name = "regs",           .function = (int (*)(void))(unsigned long long)regs,            .description = "Prints the register snapshot, if any" },
     { .name = "man",            .function = (int (*)(void))(unsigned long long)man,             .description = "Prints the description of the provided command" },
-    { .name = "snake",          .function = (int (*)(void))(unsigned long long)snake,           .description = "Launches the snake game" },
     { .name = "test_mm",        .function = (int (*)(void))(unsigned long long)testmm,          .description = "Stress tests dynamic memory (usage: test_mm [max_bytes])" },
     { .name = "test_priority",  .function = (int (*)(void))(unsigned long long)testpriority,    .description = "Exercises scheduler priorities (usage: test_priority <target_value>)" },
     { .name = "test_processes", .function = (int (*)(void))(unsigned long long)testprocesses,   .description = "Stress tests process lifecycle (usage: test_processes <max_procs>)" },
@@ -91,24 +90,16 @@ int main() {
 
         signed char c;
 
-        while(buffer_dim < MAX_BUFFER_SIZE && (c = getchar()) != '\n'){
-            command_history_buffer[buffer_dim] = c;
-            buffer[buffer_dim++] = c;
-        }
+		while ((c = getchar()) != '\n') {
+			appendCharacter(c);
+		}
 
-        buffer[buffer_dim] = 0;
-        command_history_buffer[buffer_dim] = 0;
+		putchar('\n');
 
-        if(buffer_dim == MAX_BUFFER_SIZE){
-            perror("\e[0;31mShell buffer overflow\e[0m\n");
-            buffer[0] = buffer_dim = 0;
-            while (c != '\n') c = getchar();
-            continue ;
-        };
+		buffer[buffer_dim] = 0;
+		command_history_buffer[buffer_dim] = 0;
 
-        buffer[buffer_dim] = 0;
-        
-        char * command = strtok(buffer, " ");
+		char * command = strtok(buffer, " ");
         int i = 0;
 
         for (; i < sizeof(commands) / sizeof(Command); i++) {
@@ -131,7 +122,9 @@ int main() {
             }
         }
     
-        buffer[0] = buffer_dim = 0;
+        buffer[0] = 0;
+        command_history_buffer[0] = 0;
+        buffer_dim = 0;
     }
 
     __builtin_unreachable();
@@ -139,19 +132,58 @@ int main() {
 }
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode) {
-    clearInputBuffer();
-    last_command_arrowed = SUB_MOD(last_command_arrowed, 1, HISTORY_SIZE);
-    if (command_history[last_command_arrowed][0] != 0) {
-        fprintf(FD_STDIN, command_history[last_command_arrowed]);
-    }
+	last_command_arrowed = SUB_MOD(last_command_arrowed, 1, HISTORY_SIZE);
+	if (command_history[last_command_arrowed][0] != 0) {
+		emptyScreenBuffer();
+		strcpy(buffer, command_history[last_command_arrowed]);
+		strcpy(command_history_buffer, command_history[last_command_arrowed]);
+		buffer_dim = strlen(command_history[last_command_arrowed]);
+		fprintf(FD_STDOUT, "%s", command_history[last_command_arrowed]);
+	}
 }
 
 static void printNextCommand(enum REGISTERABLE_KEYS scancode) {
-    clearInputBuffer();
-    last_command_arrowed = (last_command_arrowed + 1) % HISTORY_SIZE;
-    if (command_history[last_command_arrowed][0] != 0) {
-        fprintf(FD_STDIN, command_history[last_command_arrowed]);
-    }
+	last_command_arrowed = (last_command_arrowed + 1) % HISTORY_SIZE;
+	if (command_history[last_command_arrowed][0] != 0) {
+		emptyScreenBuffer();
+		strcpy(buffer, command_history[last_command_arrowed]);
+		strcpy(command_history_buffer, command_history[last_command_arrowed]);
+		buffer_dim = strlen(command_history[last_command_arrowed]);
+		fprintf(FD_STDOUT, "%s", command_history[last_command_arrowed]);
+	}
+}
+
+static void appendCharacter(char c) {
+	if (c == '\b' || c == 127) {
+		deleteCharacter();
+		return;
+	}
+
+	if (buffer_dim >= MAX_BUFFER_SIZE - 1) {
+		return;
+	}
+
+	buffer[buffer_dim] = c;
+	command_history_buffer[buffer_dim] = c;
+	buffer_dim++;
+	putchar(c);
+}
+
+static void deleteCharacter(void) {
+	if (buffer_dim == 0) {
+		return;
+	}
+
+buffer_dim--;
+buffer[buffer_dim] = 0;
+command_history_buffer[buffer_dim] = 0;
+clearScreenCharacter();
+}
+
+static void emptyScreenBuffer(void) {
+	while (buffer_dim > 0) {
+		deleteCharacter();
+	}
 }
 
 int history(void) {
@@ -290,10 +322,6 @@ int regs(void) {
     }
 
     return 0;
-}
-
-int snake(void) {
-    return exec(snakeModuleAddress);
 }
 
 int testmm(void) {

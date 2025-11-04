@@ -6,7 +6,6 @@
  */
 
 #include <fonts.h>
-#include <keyboard.h>
 #include <video.h>
 
 /* 
@@ -27,7 +26,6 @@
 
 #include "include/font_basic_8x8.h"
 
-#define FD_STDIN  0
 #define FD_STDOUT 1
 #define FD_STDERR 2
 
@@ -146,12 +144,6 @@ void putChar(char ascii) {
 int32_t printToFd(int32_t fd, const char * string, int32_t count) {
     if (fd != file_descriptor) {
         switch (fd) {
-            case FD_STDIN:
-                int i = 0;
-                for ( ; i < count; i++ ) {
-                    addCharToBuffer(string[i], 1);
-                }
-                return i;
             case FD_STDOUT:
                 text_color = DEFAULT_TEXT_COLOR;
                 background_color = DEFAULT_BACKGROUND_COLOR;
@@ -163,6 +155,7 @@ int32_t printToFd(int32_t fd, const char * string, int32_t count) {
                 file_descriptor = fd;
                 break;
             default:
+                return -1;
         }
     }
 

@@ -7,7 +7,7 @@ GLOBAL sys_fonts_decrease_size
 GLOBAL sys_fonts_increase_size
 GLOBAL sys_fonts_set_size
 GLOBAL sys_clear_screen
-GLOBAL sys_clear_input_buffer
+GLOBAL sys_clear_screen_character
 
 GLOBAL sys_hour
 GLOBAL sys_minute
@@ -47,7 +47,7 @@ GLOBAL sys_window_height
 
 GLOBAL sys_get_register_snapshot
 
-GLOBAL sys_get_character_without_display
+ 
 
 section .text
 
@@ -73,7 +73,7 @@ sys_fonts_decrease_size: sys_int80 0x80000007
 sys_fonts_increase_size: sys_int80 0x80000008
 sys_fonts_set_size: sys_int80 0x80000009
 sys_clear_screen: sys_int80 0x8000000A
-sys_clear_input_buffer: sys_int80 0x8000000B
+sys_clear_screen_character: sys_int80 0x8000000B
 
 
 sys_hour: sys_int80 0x80000010
@@ -114,5 +114,3 @@ sys_window_height: sys_int80 0x800000C1
 sys_sleep_milis: sys_int80 0x800000D0
 
 sys_get_register_snapshot: sys_int80 0x800000E0
-
-sys_get_character_without_display: sys_int80 0x800000F0

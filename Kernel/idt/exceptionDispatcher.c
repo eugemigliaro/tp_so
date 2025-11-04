@@ -1,7 +1,9 @@
 #include <fonts.h>
 #include <interrupts.h>
 #include <syscallDispatcher.h>
-#include <keyboard.h>
+#include <process.h>
+#include <pipes.h>
+#include <fd.h>
 
 const static char * register_names[] = {
 	"rax", "rbx", "rcx", "rdx", "rbp", "rdi", "rsi", "r8 ", "r9 ", "r10", "r11", "r12", "r13", "r14", "r15", "rsp", "rip", "rflags"
@@ -56,13 +58,21 @@ void printExceptionData(uint64_t * registers, int errorCode) {
 
 	print("Press r to go back to Shell");
 
-	char a;
-	// getKeyboardCharacter calls _hlt which triggers _sti
-	// so non-keyboard interrupts are disabled until the user confirms
+	uint8_t a = 0;
 
 	picMasterMask(KEYBOARD_PIC_MASTER);
 	picSlaveMask(NO_INTERRUPTS);
-	while ((a = getKeyboardCharacter(0)) != 'r') {}
+
+	process_t *current = process_lookup((uint32_t)get_pid());
+	if (current != NULL) {
+		uint8_t stdin_id = current->fd_targets[READ_FD];
+		do {
+			if (read_pipe(stdin_id, &a, 1) != 1) {
+				a = 0;
+			}
+		} while (a != 'r');
+	}
+
 	picMasterMask(KEYBOARD_PIC_MASTER & TIMER_PIC_MASTER);
 	picSlaveMask(NO_INTERRUPTS);
 
