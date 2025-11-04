@@ -16,6 +16,7 @@ static void init_first_process_entry(int argc, char **argv);
 static size_t process_active_count(void);
 static int32_t reap_child_process(process_t *process);
 static int shell_created = 0;
+static void adopt_orphan_children(process_t *process);
 
 
 typedef struct pcb {
@@ -177,6 +178,11 @@ void process_free_memory(process_t *process) {
         process->exit_sem = NULL;
     }
 
+    if (process->children != NULL) {
+        queue_destroy(process->children, NULL);
+        process->children = NULL;
+    }
+
     mem_free(process);
 }
 
@@ -185,6 +191,8 @@ bool process_exit(process_t *process) {
         return false;
     }
     process->state = PROCESS_STATE_TERMINATED;
+
+    adopt_orphan_children(process);
 
     if (pcb != NULL && pcb->foreground_pid == (int32_t)process->pid) {
         pcb->foreground_pid = (int32_t)process->ppid;
@@ -571,6 +579,32 @@ static int32_t reap_child_process(process_t *process) {
     process_unregister(process->pid);
     process_free_memory(process);
     return 0;
+}
+
+static void adopt_orphan_children(process_t *process) {
+    if (process == NULL || process->children == NULL) {
+        return;
+    }
+
+    if (process->pid == PROCESS_FIRST_PID) {
+        return;
+    }
+
+    _cli();
+    process_t *init_process = process_lookup(PROCESS_FIRST_PID);
+    if (init_process == NULL) {
+        _sti();
+        return;
+    }
+
+    process_t *child;
+    while ((child = (process_t *)queue_pop(process->children)) != NULL) {
+        child->ppid = init_process->pid;
+        add_child(init_process, child);
+    }
+    queue_destroy(process->children, NULL);
+    process->children = NULL;
+    _sti();
 }
 
 int32_t process_wait_pid(uint32_t pid) { 
