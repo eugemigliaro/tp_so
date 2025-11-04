@@ -15,8 +15,6 @@ GLOBAL stackInit
 GLOBAL semLock
 GLOBAL semUnlock
 
-GLOBAL _force_scheduler_interrupt
-
 EXTERN register_snapshot
 EXTERN register_snapshot_taken
 
@@ -181,7 +179,3 @@ semLock:
 semUnlock:
     mov BYTE [rdi], 0
     ret
-
-_force_scheduler_interrupt:
-	int 0x20
-	ret

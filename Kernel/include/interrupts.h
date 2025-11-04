@@ -27,6 +27,8 @@ void picSlaveMask(uint8_t mask);
 
 uint8_t picMasterGetMask(void);
 
+void _force_scheduler_interrupt(void);
+
 #define TIMER_PIC_MASTER 0xFE
 #define KEYBOARD_PIC_MASTER 0xFD
 #define NO_INTERRUPTS 0xFF

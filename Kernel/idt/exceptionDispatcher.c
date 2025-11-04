@@ -79,7 +79,8 @@ void printExceptionData(uint64_t * registers, int errorCode) {
 		uint8_t stdin_id = current->fd_targets[READ_FD];
 		do {
 			if (read_pipe(stdin_id, &a, 1) != 1) {
-				a = 0;
+				print_err("\nError reading from keyboard input\n");
+				return;
 			}
 		} while (a != 'r');
 	}

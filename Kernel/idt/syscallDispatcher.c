@@ -12,6 +12,7 @@
 #include <sem.h>
 #include <fd.h>
 #include <pipes.h>
+#include <interrupts.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
