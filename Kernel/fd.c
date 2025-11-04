@@ -9,7 +9,7 @@ static int is_valid_fd(int32_t fd) {
     return fd == READ_FD || fd == WRITE_FD || fd == ERROR_FD;
 }
 
-int set_fd_targets(uint8_t read_target, uint8_t write_target) {
+int set_fd_targets(uint8_t read_target, uint8_t write_target, uint8_t error_target) {
     _cli();
     process_t *current = scheduler_current();
     _sti();
@@ -20,6 +20,7 @@ int set_fd_targets(uint8_t read_target, uint8_t write_target) {
 
     uint8_t old_read = current->fd_targets[0];
     uint8_t old_write = current->fd_targets[1];
+    uint8_t old_error = current->fd_targets[2];
 
     int attached_read = 0;
     int attached_write = 0;
@@ -39,6 +40,17 @@ int set_fd_targets(uint8_t read_target, uint8_t write_target) {
         }
         attached_write = 1;
     }
+    if (error_target != old_error) {
+        if (attach_to_pipe(error_target) != 0) {
+            if (attached_read) {
+                unattach_from_pipe(read_target, (int)current->pid);
+            }
+            if (attached_write) {
+                unattach_from_pipe(write_target, (int)current->pid);
+            }
+            return -1;
+        }
+    }
 
     if (read_target != old_read) {
         setReadTarget(current->fd_targets, read_target);
@@ -47,6 +59,10 @@ int set_fd_targets(uint8_t read_target, uint8_t write_target) {
     if (write_target != old_write) {
         setWriteTarget(current->fd_targets, write_target);
         unattach_from_pipe(old_write, (int)current->pid);
+    }
+    if (error_target != old_error) {
+        setErrorTarget(current->fd_targets, error_target);
+        unattach_from_pipe(old_error, (int)current->pid);
     }
 
     return 0;
@@ -67,6 +83,15 @@ int setWriteTarget(uint8_t fd_targets[3], uint8_t target) {
     }
 
     fd_targets[WRITE_FD] = target;
+    return 0;
+}
+
+int setErrorTarget(uint8_t fd_targets[3], uint8_t target) {
+    if (fd_targets == NULL) {
+        return -1;
+    }
+
+    fd_targets[ERROR_FD] = target;
     return 0;
 }
 

@@ -82,6 +82,6 @@ int32_t sys_get_register_snapshot(int64_t * registers);
 /* 0x80000130 */
 int32_t sys_open_pipe(void);
 /* 0x80000131 */
-int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target);
+int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target, uint64_t error_target);
 
 #endif
