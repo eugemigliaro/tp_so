@@ -12,7 +12,7 @@
 #include <tests/test_semaphore.h>
 
 #include "commands.h"
-#include "shell_internal.h"
+#include "shell.h"
 
 #ifdef ANSI_4_BIT_COLOR_SUPPORT
     #include <ansiColors.h>

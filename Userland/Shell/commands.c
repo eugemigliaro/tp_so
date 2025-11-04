@@ -1,5 +1,5 @@
 #include "commands.h"
-#include "shell_internal.h"
+#include "shell.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,8 +92,6 @@ int regs(int argc, char *argv[]) {
 
     return 0;
 }
-
-int testmm(int argc, char *argv[]) {
 
 int testmm(int argc, char *argv[]) {
     // test_mm already expects argc/argv format
