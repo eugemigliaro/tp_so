@@ -265,6 +265,24 @@ static const char *process_state_to_string(process_state_t state) {
     }
 }
 
+static void process_entry_wrapper(int argc, char **argv) {
+    process_t *current = scheduler_current();
+    if (current == NULL || current->user_entry_point == NULL) {
+        process_exit(current);
+    }
+    
+    int (*user_func)(int, char**) = (int (*)(int, char**))current->user_entry_point;
+    int exit_code = user_func(argc, argv);
+    
+    process_exit(current);
+    
+    // Failsafe: should never reach here, but if we do, yield forever
+    while(1) {
+        current->remaining_quantum = 0;
+        _force_scheduler_interrupt();
+    }
+}
+
 process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority, uint8_t foreground, void *entry_point) {
     if (entry_point == NULL) {
         return NULL;
@@ -289,6 +307,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->last_quantum_ticks = 0;
     process->argc = argc;
     process->children = NULL;
+    process->user_entry_point = entry_point;
 
     process_t *parent = NULL;
     uint8_t stdin_target = STDIN;
@@ -316,7 +335,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->stack_base = stack_base;
 
     void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE - sizeof(uint64_t);
-    uint64_t prepared_rsp = (uint64_t)stackInit(stack_top, (void *)entry_point, argc, argv);
+    uint64_t prepared_rsp = (uint64_t)stackInit(stack_top, (void *)process_entry_wrapper, argc, argv);
     process->context.rsp = prepared_rsp;
 
     process->argv = (char **)mem_alloc(sizeof(char *) * process->argc);

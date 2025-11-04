@@ -193,7 +193,16 @@ int main() {
         int found = 0;
         for (int i = 0; commands[i].name != NULL; i++) {
             if (strcmp(commands[i].name, argv[0]) == 0) {
-                last_command_output = commands[i].func(argc, argv);
+                if (commands[i].isBuiltIn) {
+                    last_command_output = commands[i].func(argc, argv);
+                } else {
+                    int32_t pid = processCreate((void (*)(int, char **))commands[i].func, argc, argv, 1, 0);
+                    if (pid < 0) {
+                        printf("\e[0;31mError creating process\e[0m\n");
+                    } else {
+                        last_command_output = processWaitPid(pid);
+                    }
+                }
                 strncpy(command_history[command_history_last], command_history_buffer, MAX_BUFFER_SIZE - 1);
                 command_history[command_history_last][buffer_dim] = '\0';
                 INC_MOD(command_history_last, HISTORY_SIZE);
