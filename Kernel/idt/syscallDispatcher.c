@@ -9,10 +9,12 @@
 #include <process.h>
 #include <scheduler.h>
 #include <memoryManager.h>
+#include <queueADT.h>
 #include <sem.h>
 #include <fd.h>
 #include <pipes.h>
 #include <interrupts.h>
+#include <memoryManager.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
@@ -47,6 +49,7 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000021: return sys_fill_video_memory(registers->rdi);
 		case 0x80000022: return (int64_t) sys_mem_alloc(registers->rdi);
 		case 0x80000023: return sys_mem_free((void *) registers->rdi);
+		case 0x80000024: return sys_mem_status_print();
 
 		case 0x800000A0: return sys_exec((int (*)(void)) registers->rdi);
 
@@ -63,6 +66,10 @@ int64_t syscallDispatcher(Registers * registers) {
 	case 0x80000121: return sys_sem_close((sem_t *) registers->rdi);
 	case 0x80000122: return sys_sem_wait((sem_t *) registers->rdi);
 	case 0x80000123: return sys_sem_post((sem_t *) registers->rdi);
+	case 0x80000124: return sys_sem_set_value((sem_t *) registers->rdi, (uint32_t)registers->rsi);
+
+	case 0x80000130: return sys_open_pipe();
+	case 0x80000131: return sys_set_fd_targets((uint64_t)registers->rdi, (uint64_t)registers->rsi);
 
 	case 0x80000100: return sys_process_create(
 			(void (*)(int, char **)) registers->rdi,
@@ -202,6 +209,10 @@ int32_t sys_mem_free(void *ptr) {
 	return 0;
 }
 
+int32_t sys_mem_status_print(void) {
+	return print_mem_status();
+}
+
 int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
 	if (name == NULL) {
 		return -1;
@@ -253,6 +264,10 @@ int32_t sys_sem_post(sem_t *sem) {
 		return -1;
 	}
 	return sem_post(sem);
+}
+
+int32_t sys_sem_set_value(sem_t *sem, uint32_t new_value) {
+	return sem_set_value(sem, new_value);
 }
 
 // ==================================================================
@@ -410,4 +425,16 @@ int32_t sys_process_give_foreground(uint64_t target_pid) {
 	}
 
 	return give_foreground_to((uint32_t)target_pid); 
+}
+
+// ==================================================================
+// Pipes and FD target system calls
+// ==================================================================
+
+int32_t sys_open_pipe(void) {
+    return open_pipe();
+}
+
+int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target) {
+    return set_fd_targets((uint8_t)read_target, (uint8_t)write_target);
 }

@@ -17,6 +17,7 @@ GLOBAL sys_sleep_milis
 GLOBAL sys_circle
 GLOBAL sys_rectangle
 GLOBAL sys_fill_video_memory
+GLOBAL sys_mem_status_print
 
 GLOBAL sys_mem_alloc
 GLOBAL sys_mem_free
@@ -25,6 +26,7 @@ GLOBAL sys_sem_open
 GLOBAL sys_sem_close
 GLOBAL sys_sem_wait
 GLOBAL sys_sem_post
+GLOBAL sys_sem_set_value
 
 GLOBAL sys_process_create
 GLOBAL sys_process_exit
@@ -47,7 +49,8 @@ GLOBAL sys_window_height
 
 GLOBAL sys_get_register_snapshot
 
- 
+GLOBAL sys_open_pipe
+GLOBAL sys_set_fd_targets
 
 section .text
 
@@ -83,6 +86,7 @@ sys_second: sys_int80 0x80000012
 sys_circle: sys_int80 0x80000019
 sys_rectangle: sys_int80 0x80000020
 sys_fill_video_memory: sys_int80 0x80000021
+sys_mem_status_print: sys_int80 0x80000024
 
 sys_mem_alloc: sys_int80 0x80000022
 sys_mem_free: sys_int80 0x80000023
@@ -91,6 +95,7 @@ sys_sem_open: sys_int80 0x80000120
 sys_sem_close: sys_int80 0x80000121
 sys_sem_wait: sys_int80 0x80000122
 sys_sem_post: sys_int80 0x80000123
+sys_sem_set_value: sys_int80 0x80000124
 
 sys_process_create: sys_int80 0x80000100
 sys_process_exit: sys_int80 0x80000101
@@ -114,3 +119,6 @@ sys_window_height: sys_int80 0x800000C1
 sys_sleep_milis: sys_int80 0x800000D0
 
 sys_get_register_snapshot: sys_int80 0x800000E0
+
+sys_open_pipe: sys_int80 0x80000130
+sys_set_fd_targets: sys_int80 0x80000131

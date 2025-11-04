@@ -78,3 +78,17 @@ uint32_t uint_to_base(uint64_t value, char *buffer, uint32_t base)
 
 	return i;
 }
+
+int32_t print_mem_status_common(size_t total, size_t used, size_t available) {
+    print("=== Memory Status ===\n");
+    print("Total: ");
+    printDec((uint64_t)total);
+    newLine();
+    print("Used:  ");
+    printDec((uint64_t)used);
+    newLine();
+    print("Free:  ");
+    printDec((uint64_t)available);
+    newLine();
+    return 0;
+}

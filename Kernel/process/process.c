@@ -190,6 +190,14 @@ bool process_exit(process_t *process) {
     if (process == NULL) {
         return false;
     }
+    
+    _cli();
+    
+    if (process->state == PROCESS_STATE_READY) {
+        scheduler_remove_ready(process);
+        _cli();
+    }
+    
     process->state = PROCESS_STATE_TERMINATED;
 
     adopt_orphan_children(process);
@@ -197,11 +205,17 @@ bool process_exit(process_t *process) {
     if (pcb != NULL && pcb->foreground_pid == (int32_t)process->pid) {
         pcb->foreground_pid = (int32_t)process->ppid;
     }
-
+    
+    int should_force_switch = (pcb != NULL && pcb->running_pid == (int32_t)process->pid);
+    
+    _sti();
+    
     sem_post(process->exit_sem);
-
-    _force_scheduler_interrupt(); //no deberia hacerlo si solo si el proceso estaba en running?
-
+    
+    if (should_force_switch) {
+        _force_scheduler_interrupt();
+    }
+    
     return true;
 }
 

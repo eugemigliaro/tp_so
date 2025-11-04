@@ -32,8 +32,6 @@ static void destroy_pipe(uint8_t id, pipe_t pipe);
 void init_pipes(void) {
   strcpy(sem_name, "pipe_XXX");
   sem_name[SEM_NAME_LENGTH - 1] = '\0';
-
-  return;
 }
 
 static void set_sem_name_number(void) {
