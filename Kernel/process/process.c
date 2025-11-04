@@ -242,8 +242,6 @@ static const char *process_state_to_string(process_state_t state) {
             return "ready";
         case PROCESS_STATE_RUNNING:
             return "running";
-        case PROCESS_STATE_YIELD:
-            return "yield";
         case PROCESS_STATE_BLOCKED:
             return "blocked";
         case PROCESS_STATE_TERMINATED:

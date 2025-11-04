@@ -137,10 +137,6 @@ void *schedule_tick(void *current_rsp) {
             running->state = PROCESS_STATE_READY;
         } else {
             if(running->state != PROCESS_STATE_RUNNING) {
-                if (running->state == PROCESS_STATE_YIELD) {
-                    scheduler_add_ready(running);
-                }
-                // The running process was blocked, yielded, or terminated during its time slice
                 scheduler.current = NULL;
                 process_set_running(NULL);
                 must_switch = true;
