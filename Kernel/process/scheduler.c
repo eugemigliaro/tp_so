@@ -245,6 +245,7 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
 
     if (process->state == PROCESS_STATE_READY && priority != old_priority) {
         queue_t *source_queue = queue_for_priority(old_priority);
+        _cli();
         queue_t *buffer_queue = queue_create();
         if (buffer_queue == NULL) {
             _sti();
@@ -268,6 +269,7 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
 
     if (process->state == PROCESS_STATE_READY && priority != old_priority) {
         queue_push(queue_for_priority(priority), process);
+        _cli();
     }
 
     if (process == scheduler.current) {
