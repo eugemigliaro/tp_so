@@ -6,11 +6,6 @@
 #include <sys.h>
 #include <exceptions.h>
 
-#include <tests/test_mm.h>
-#include <tests/test_processes.h>
-#include <tests/test_priority.h>
-#include <tests/test_semaphore.h>
-
 #include "commands.h"
 #include "shell.h"
 

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <tests/test_priority.h>
+#include <test.h>
 #include <sys.h>
 
 #define TOTAL_PROCESSES 3

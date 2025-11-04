@@ -4,11 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys.h>
-
-#include <tests/test_mm.h>
-#include <tests/test_processes.h>
-#include <tests/test_priority.h>
-#include <tests/test_semaphore.h>
+#include <test.h>
 
 // ========== Existing commands (adapted to argc/argv pattern) ==========
 
@@ -93,63 +89,23 @@ int regs(int argc, char *argv[]) {
     return 0;
 }
 
+// ========== TEST COMMANDS ==========
+// These are thin wrappers that call the actual test functions
+
 int testmm(int argc, char *argv[]) {
-    // test_mm already expects argc/argv format
-    char *test_argv[2] = {"test_mm", NULL};
-    uint64_t test_argc = 1;
-
-    if (argc >= 2) {
-        test_argv[1] = argv[1];
-        test_argc = 2;
-    }
-
-    if (argc > 2) {
-        printf("test_mm takes at most one numeric argument (max bytes).\n");
-        return 1;
-    }
-
-    uint64_t result = test_mm(test_argc, test_argv);
-    return (int)result;
+    return (int)test_mm(argc, argv);
 }
 
 int testprocesses(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("test_processes expects exactly one numeric argument (max processes).\n");
-        return 1;
-    }
-
-    char *test_argv[2] = {"test_processes", argv[1]};
-    uint64_t result = test_processes(2, test_argv);
-    return (int)result;
+    return (int)test_processes(argc, argv);
 }
 
 int testpriority(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("test_priority expects exactly one numeric argument (target value).\n");
-        return 1;
-    }
-
-    char *test_argv[2] = {"test_priority", argv[1]};
-    uint64_t result = test_prio(2, test_argv);
-    return (int)result;
+    return (int)test_prio(argc, argv);
 }
 
 int testsemaphore(int argc, char *argv[]) {
-    char *test_argv[2] = {"test_semaphore", NULL};
-    uint64_t test_argc = 1;
-
-    if (argc >= 2) {
-        test_argv[1] = argv[1];
-        test_argc = 2;
-    }
-
-    if (argc > 2) {
-        printf("test_semaphore takes at most one numeric argument (iterations).\n");
-        return 1;
-    }
-
-    uint64_t result = test_semaphore(test_argc, test_argv);
-    return (int)result;
+    return (int)test_semaphore(argc, argv);
 }
 
 // ========== NEW COMMANDS for TP2 ==========

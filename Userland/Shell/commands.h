@@ -10,7 +10,9 @@ int font(int argc, char *argv[]);
 int man(int argc, char *argv[]);
 int regs(int argc, char *argv[]);
 
-// Test commands
+// ========== TEST COMMANDS ==========
+// Thin wrappers around test functions from Userland/tests/
+
 int testmm(int argc, char *argv[]);
 int testprocesses(int argc, char *argv[]);
 int testpriority(int argc, char *argv[]);
