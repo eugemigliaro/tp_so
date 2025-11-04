@@ -13,6 +13,7 @@
 #include <interrupts.h>
 #include <time.h>
 #include <sem.h>
+#include <pipes.h>
 
 // extern uint8_t text;
 // extern uint8_t rodata;
@@ -24,7 +25,6 @@ extern uint8_t endOfKernel;
 static const uint64_t PageSize = 0x1000;
 
 static void * const shellModuleAddress = (void *)0x400000;
-static void * const snakeModuleAddress = (void *)0x500000;
 
 typedef int (*EntryPoint)();
 
@@ -47,7 +47,6 @@ void * getStackBase() {
 void * initializeKernelBinary(){
 	void * moduleAddresses[] = {
 		shellModuleAddress,
-		snakeModuleAddress,
 	};
 
 	loadModules(&endOfKernelBinary, moduleAddresses);
@@ -67,20 +66,32 @@ int main(){
 	scheduler_init();
 	sem_init(&demo_sem, "demo_sem", 1);
 
+	init_pipes();
+
 	setFontSize(2);
 	clear();
 
+	print("Launching init process...\n");
+
+	if (add_first_process() < 0) {
+		print("Failed to create init process\n");
+		while (1) {
+			_hlt();
+		}
+	}
+
+	/*
 	print("Launching shell process...\n");
  
 	char **argv_shell = mem_alloc(sizeof(char *));
 	argv_shell[0] = "shell";
-	pcb_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))shellModuleAddress);
+	process_t *shell_process = createProcess(1, argv_shell, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))shellModuleAddress);
 	if (shell_process != NULL) {
 		scheduler_add_ready(shell_process);
 	} else {
 		print("Failed to create shell process\n");
 	}
-
+	*/
 	/* print("Launching quantum printing process...\n");
 
 	char **argv_quantum = mem_alloc(2 * sizeof(char *));
@@ -88,7 +99,7 @@ int main(){
 	char *quantum_arg = mem_alloc(sizeof(char) * 6);
 	strcpy(quantum_arg, "arg1");
 	argv_quantum[1] = quantum_arg;
-	pcb_t *quantum_printing_process = createProcess(2, argv_quantum, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))process_that_prints_its_remaining_quantum);
+	process_t *quantum_printing_process = createProcess(2, argv_quantum, 1, SCHEDULER_MAX_PRIORITY, 1, (void (*)(void))process_that_prints_its_remaining_quantum);
 	if (quantum_printing_process != NULL) {
 		scheduler_add_ready(quantum_printing_process);
 	} else {
@@ -97,7 +108,7 @@ int main(){
 
 	print("Launching semaphore demo workers...\n");
 	char *sem_worker_a_args[] = { "sem-A" };
-	pcb_t *sem_worker_a = createProcess(1, sem_worker_a_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
+	process_t *sem_worker_a = createProcess(1, sem_worker_a_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
 	if (sem_worker_a != NULL) {
 		scheduler_add_ready(sem_worker_a);
 	} else {
@@ -105,7 +116,7 @@ int main(){
 	}
 
 	char *sem_worker_b_args[] = { "sem-B" };
-	pcb_t *sem_worker_b = createProcess(1, sem_worker_b_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
+	process_t *sem_worker_b = createProcess(1, sem_worker_b_args, 1, SCHEDULER_MIN_PRIORITY, 1, semaphore_worker);
 	if (sem_worker_b != NULL) {
 		scheduler_add_ready(sem_worker_b);
 	} else {

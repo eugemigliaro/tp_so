@@ -9,7 +9,12 @@
 #include <process.h>
 #include <scheduler.h>
 #include <memoryManager.h>
+#include <queueADT.h>
 #include <sem.h>
+#include <fd.h>
+#include <pipes.h>
+#include <interrupts.h>
+#include <memoryManager.h>
 
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
@@ -33,7 +38,7 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000008: return sys_fonts_increase_size();
 		case 0x80000009: return sys_fonts_set_size((uint8_t) registers->rdi);
 		case 0x8000000A: return sys_clear_screen();
-		case 0x8000000B: return sys_clear_input_buffer();
+		case 0x8000000B: return sys_clear_screen_character();
 
 		case 0x80000010: return sys_hour((int *) registers->rdi);
 		case 0x80000011: return sys_minute((int *) registers->rdi);
@@ -44,6 +49,7 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000021: return sys_fill_video_memory(registers->rdi);
 		case 0x80000022: return (int64_t) sys_mem_alloc(registers->rdi);
 		case 0x80000023: return sys_mem_free((void *) registers->rdi);
+		case 0x80000024: return sys_mem_status_print();
 
 		case 0x800000A0: return sys_exec((int (*)(void)) registers->rdi);
 
@@ -56,12 +62,14 @@ int64_t syscallDispatcher(Registers * registers) {
 
 		case 0x800000E0: return sys_get_register_snapshot((int64_t *) registers->rdi);
 
-	case 0x800000F0: return sys_get_character_without_display();
-
 	case 0x80000120: return sys_sem_open((const char *) registers->rdi, (uint32_t) registers->rsi, (uint8_t) registers->rdx);
 	case 0x80000121: return sys_sem_close((sem_t *) registers->rdi);
 	case 0x80000122: return sys_sem_wait((sem_t *) registers->rdi);
 	case 0x80000123: return sys_sem_post((sem_t *) registers->rdi);
+	case 0x80000124: return sys_sem_set_value((sem_t *) registers->rdi, (uint32_t)registers->rsi);
+
+	case 0x80000130: return sys_open_pipe();
+	case 0x80000131: return sys_set_fd_targets((uint64_t)registers->rdi, (uint64_t)registers->rsi);
 
 	case 0x80000100: return sys_process_create(
 			(void (*)(int, char **)) registers->rdi,
@@ -73,13 +81,14 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000101: return sys_process_exit((int32_t) registers->rdi);
 		case 0x80000102: return sys_process_get_pid();
 		case 0x80000103: return sys_process_list();
-		case 0x80000104: return sys_process_kill((uint64_t) registers->rdi);
-		case 0x80000105: return sys_process_set_priority((uint64_t) registers->rdi, (uint8_t) registers->rsi);
-		case 0x80000106: return sys_process_block((uint64_t) registers->rdi);
-		case 0x80000107: return sys_process_unblock((uint64_t) registers->rdi);
+		case 0x80000104: return sys_process_kill((uint32_t) registers->rdi);
+		case 0x80000105: return sys_process_set_priority((uint32_t) registers->rdi, (uint8_t) registers->rsi);
+		case 0x80000106: return sys_process_block((uint32_t) registers->rdi);
+		case 0x80000107: return sys_process_unblock((uint32_t) registers->rdi);
 		case 0x80000108: return sys_process_yield();
-		case 0x80000109: return sys_process_wait_pid((uint64_t) registers->rdi);
+		case 0x80000109: return sys_process_wait_pid((uint32_t) registers->rdi);
 		case 0x8000010A: return sys_process_wait_children();
+		case 0x8000010B: return sys_process_give_foreground(registers->rdi);
 		
 		default:
             return 0;
@@ -91,16 +100,11 @@ int64_t syscallDispatcher(Registers * registers) {
 // ==================================================================
 
 int32_t sys_write(int32_t fd, char * __user_buf, int32_t count) {
-    return printToFd(fd, __user_buf, count);
+    return write(fd, (const uint8_t *) __user_buf, count);
 }
 
 int32_t sys_read(int32_t fd, signed char * __user_buf, int32_t count) {
-	int32_t i;
-	int8_t c;
-	for(i = 0; i < count && (c = getKeyboardCharacter(AWAIT_RETURN_KEY | SHOW_BUFFER_WHILE_TYPING)) != EOF; i++){
-		*(__user_buf + i) = c;
-	}
-    return i;
+    return read(fd, (uint8_t *) __user_buf, count);
 }
 
 // ==================================================================
@@ -144,8 +148,8 @@ int32_t sys_clear_screen(void) {
 	return 0;
 }
 
-int32_t sys_clear_input_buffer(void) {
-	while(clearBuffer() != 0);
+int32_t sys_clear_screen_character(void) {
+	clearPreviousCharacter();
 	return 0;
 }
 
@@ -205,6 +209,10 @@ int32_t sys_mem_free(void *ptr) {
 	return 0;
 }
 
+int32_t sys_mem_status_print(void) {
+	return print_mem_status();
+}
+
 int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
 	if (name == NULL) {
 		return -1;
@@ -219,12 +227,11 @@ int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if
 		return -1;
 	}
 
-	sem = mem_alloc(sizeof(sem_t));
+	sem = sem_create();
 	if (sem == NULL) {
 		return -1;
 	}
 
-	memset(sem, 0, sizeof(sem_t));
 	sem_init(sem, name, initial_count);
 	if (sem->name == NULL || sem->waiting_processes == NULL) {
 		sem_destroy(sem);
@@ -257,6 +264,10 @@ int32_t sys_sem_post(sem_t *sem) {
 		return -1;
 	}
 	return sem_post(sem);
+}
+
+int32_t sys_sem_set_value(sem_t *sem, uint32_t new_value) {
+	return sem_set_value(sem, new_value);
 }
 
 // ==================================================================
@@ -316,10 +327,6 @@ int32_t sys_get_register_snapshot(int64_t * registers) {
 	return 1;
 }
 
-int32_t sys_get_character_without_display(void) {
-	return getKeyboardCharacter(0);
-}
-
 // ==================================================================
 // Context Switch system calls
 // ==================================================================
@@ -332,27 +339,29 @@ int32_t sys_process_list(void) {
 	return print_process_list();
 }
 
-int32_t sys_process_set_priority(uint64_t pid, uint8_t priority) {
+int32_t sys_process_set_priority(uint32_t pid, uint8_t priority) {
 	return scheduler_set_process_priority(pid, priority);
 }
 
 int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground) {
-	pcb_t *pcb = createProcess(argc, argv, (uint64_t)get_pid(), priority, foreground, entry_point);
-	if (pcb == NULL) {
+	int32_t caller_pid = get_pid();
+	uint32_t parent_pid = (caller_pid < 0) ? 0 : (uint32_t)caller_pid;
+	process_t *process = createProcess(argc, argv, parent_pid, priority, foreground, entry_point);
+	if (process == NULL) {
 		return -1;
 	}
-	scheduler_add_ready(pcb);
-	return (int32_t)pcb->pid;
+	scheduler_add_ready(process);
+	return (int32_t)process->pid;
 }
 
 int32_t sys_process_exit(int32_t status) {
-	pcb_t *pcb = scheduler_current();
+	process_t *process = scheduler_current();
 
-	if (pcb == NULL) {
+	if (process == NULL) {
 		return status;
 	}
 
-	if (!process_exit(pcb)) {
+	if (!process_exit(process)) {
         status = -1;
     }
 
@@ -360,33 +369,33 @@ int32_t sys_process_exit(int32_t status) {
 }
 
 
-int32_t sys_process_block(uint64_t pid) {
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+int32_t sys_process_block(uint32_t pid) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         return -1;
     }
-    if (!process_block(pcb)) {
+    if (!process_block(process)) {
         return -1;
     }
     _force_scheduler_interrupt();
-    return 0;
+    return 0; 
 }
 
-int32_t sys_process_unblock(uint64_t pid) {
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+int32_t sys_process_unblock(uint32_t pid) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         return -1;
     }
-    return process_unblock(pcb) ? 0 : -1;
+    return process_unblock(process) ? 0 : -1;
 }
 
-int32_t sys_process_kill(uint64_t pid) {
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+int32_t sys_process_kill(uint32_t pid) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         return -1;
     }
 
-    if (!process_exit(pcb)) {
+    if (!process_exit(process)) {
         return -1;
     }
 
@@ -394,18 +403,38 @@ int32_t sys_process_kill(uint64_t pid) {
 }
 
 int32_t sys_process_yield(void) {
-	pcb_t *pcb = scheduler_current();
-	if (pcb != NULL) {
-		pcb->state = PROCESS_STATE_YIELD;
+	process_t *process = scheduler_current();
+	if (process != NULL) {
+		process->remaining_quantum = 0;
 	}
 	_force_scheduler_interrupt();
 	return 0;
 }
 
-int32_t sys_process_wait_pid(uint64_t pid) {
+int32_t sys_process_wait_pid(uint32_t pid) {
 	return process_wait_pid(pid);
 }
 
 int32_t sys_process_wait_children(void) {
 	return process_wait_children();
+}
+
+int32_t sys_process_give_foreground(uint64_t target_pid) {
+	if (target_pid < PROCESS_FIRST_PID || target_pid >= PROCESS_FIRST_PID + PROCESS_MAX_PROCESSES) {
+		return -1;
+	}
+
+	return give_foreground_to((uint32_t)target_pid); 
+}
+
+// ==================================================================
+// Pipes and FD target system calls
+// ==================================================================
+
+int32_t sys_open_pipe(void) {
+    return open_pipe();
+}
+
+int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target) {
+    return set_fd_targets((uint8_t)read_target, (uint8_t)write_target);
 }

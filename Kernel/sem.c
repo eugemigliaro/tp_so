@@ -6,9 +6,14 @@
 #include <strings.h>
 #include <process.h>
 #include <scheduler.h>
+#include <interrupts.h>
 
 static queue_t *registered_semaphores = NULL;
 static uint8_t registry_lock = 0;
+
+static bool timer_tick_is_disabled(void) {
+    return (picMasterGetMask() & 0x01) != 0;
+}
 
 static void ensure_registry(void) {
     if (registered_semaphores == NULL) {
@@ -29,6 +34,10 @@ static sem_t *find_registered(const char *name) {
         }
     }
     return NULL;
+}
+
+sem_t *sem_create(void) {
+    return mem_alloc(sizeof(sem_t));
 }
 
 sem_t *sem_find(const char *name) {
@@ -76,9 +85,9 @@ void sem_destroy(sem_t *sem) {
     semLock(&sem->lock);
 
     while (sem->waiting_processes != NULL && !queue_is_empty(sem->waiting_processes)) {
-        pcb_t *pcb = (pcb_t *)queue_pop(sem->waiting_processes);
-        if (pcb != NULL) {
-            process_unblock(pcb);
+        process_t *process = (process_t *)queue_pop(sem->waiting_processes);
+        if (process != NULL) {
+            process_unblock(process);
         }
     }
 
@@ -97,6 +106,7 @@ void sem_destroy(sem_t *sem) {
 
 int sem_post(sem_t *sem){
     int ret = -1;
+    bool should_force_scheduler = false;
     if(sem == NULL){
         return ret;
     }
@@ -107,14 +117,22 @@ int sem_post(sem_t *sem){
         sem->count++;
         ret = 0;
     } else {
-        pcb_t *pcb = (pcb_t *)queue_pop(sem->waiting_processes);
-        if (pcb != NULL) {
-            process_unblock(pcb);
+        process_t *process = (process_t *)queue_pop(sem->waiting_processes);
+        if (process != NULL) {
+            should_force_scheduler = process_unblock(process);
             ret = 0;
         }
     }
 
     semUnlock(&sem->lock);
+
+    if (should_force_scheduler && timer_tick_is_disabled()) {
+        process_t *current = scheduler_current();
+        if (current != NULL) {
+            current->remaining_quantum = 0;
+        }
+        _force_scheduler_interrupt();
+    }
 
     return ret;
 }
@@ -132,7 +150,7 @@ int sem_wait(sem_t *sem){
         sem->count--;
         ret = 0;
     } else {
-        pcb_t *current_process = scheduler_current();
+        process_t *current_process = scheduler_current();
         if (current_process != NULL) {
             queue_push(sem->waiting_processes, current_process);
             blocked = process_block(current_process);
@@ -161,4 +179,45 @@ int sem_waiting_count(sem_t *sem) {
     }
     semUnlock(&sem->lock);
     return count;
+}
+
+int sem_get_value(sem_t *sem) {
+    if (sem == NULL) {
+        return -1;
+    }
+    semLock(&sem->lock);
+    int value = (int)sem->count;
+    semUnlock(&sem->lock);
+    return value;
+}
+
+int sem_remove_process(sem_t *sem, int pid) {
+    if (sem == NULL) {
+        return -1;
+    }
+
+    return queue_remove(sem->waiting_processes, (void *)(uintptr_t)pid);
+}
+
+int sem_set_value(sem_t *sem, uint32_t new_value) {
+    if (sem == NULL) {
+        return -1;
+    }
+
+    semLock(&sem->lock);
+    uint32_t current = sem->count;
+    semUnlock(&sem->lock);
+
+    if (new_value > current) {
+        uint32_t delta = new_value - current;
+        for (uint32_t i = 0; i < delta; i++) {
+            sem_post(sem);
+        }
+    } else if (new_value < current) {
+        semLock(&sem->lock);
+        sem->count = new_value;
+        semUnlock(&sem->lock);
+    }
+
+    return 0;
 }

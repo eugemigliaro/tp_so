@@ -16,10 +16,12 @@ $(MODULE): $(OBJECTS_C) $(OBJECTS_ASM)
 	$(GCC) -c $(GCCFLAGS) $<
 
 %.o : %.asm
+	@mkdir -p $(dir $@)
 	$(ASM) $(ASMFLAGS) $< -o $@
 
 clean:
 	rm -f *.o
+	rm -f asm/*.o
 	rm -f ../$(MODULE)
 
 .PHONY: all clean print

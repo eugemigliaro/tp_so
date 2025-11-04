@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 #include <lib.h>
 
 void * memset(void * destination, int32_t c, uint64_t length)
@@ -48,4 +49,46 @@ void * memcpy(void * destination, const void * source, uint64_t length)
 	}
 
 	return destination;
+}
+
+uint32_t uint_to_base(uint64_t value, char *buffer, uint32_t base)
+{
+	const char symbols[] = "0123456789ABCDEF";
+	uint32_t i = 0;
+
+	if (buffer == NULL || base < 2 || base > 16) {
+		return 0;
+	}
+
+	if (value == 0) {
+		buffer[i++] = '0';
+		return i;
+	}
+
+	while (value != 0) {
+		buffer[i++] = symbols[value % base];
+		value /= base;
+	}
+
+	for (uint32_t j = 0; j < i / 2; j++) {
+		char tmp = buffer[j];
+		buffer[j] = buffer[i - j - 1];
+		buffer[i - j - 1] = tmp;
+	}
+
+	return i;
+}
+
+int32_t print_mem_status_common(size_t total, size_t used, size_t available) {
+    print("=== Memory Status ===\n");
+    print("Total: ");
+    printDec((uint64_t)total);
+    newLine();
+    print("Used:  ");
+    printDec((uint64_t)used);
+    newLine();
+    print("Free:  ");
+    printDec((uint64_t)available);
+    newLine();
+    return 0;
 }

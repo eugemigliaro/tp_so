@@ -6,10 +6,10 @@
 #include <memoryManager.h>
 
 typedef struct scheduler_state {
-    pcb_t *current;
+    process_t *current;
     scheduler_metrics_t metrics;
     queue_t *ready_queues[SCHEDULER_PRIORITY_LEVELS];
-    pcb_t *idle;
+    process_t *idle;
 } scheduler_state_t;
 
 static scheduler_state_t scheduler = {0};
@@ -72,38 +72,38 @@ void scheduler_init(void) {
     _sti();
 }
 
-void scheduler_add_ready(pcb_t *pcb) {
+void scheduler_add_ready(process_t *process) {
     _cli();
-    if (pcb == NULL) {
+    if (process == NULL) {
         _sti();
         return;
     }
-    pcb->state = PROCESS_STATE_READY;
-    if (pcb != scheduler.idle) {
-        pcb->priority = priority_from_usage(pcb->last_quantum_ticks);
+    process->state = PROCESS_STATE_READY;
+    if (process != scheduler.idle) {
+        process->priority = priority_from_usage(process->last_quantum_ticks);
     }
-    pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
-    pcb->last_quantum_ticks = 0;
-    queue_push(queue_for_priority(pcb->priority), pcb);
+    process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+    process->last_quantum_ticks = 0;
+    queue_push(queue_for_priority(process->priority), process);
     _sti();
 }
 
-bool scheduler_remove_ready(pcb_t *pcb) {
+bool scheduler_remove_ready(process_t *process) {
     _cli();
-    if (pcb == NULL || pcb == scheduler.idle) {
+    if (process == NULL || process == scheduler.idle) {
         _sti();
         return false;
     }
 
-    queue_t *queue = queue_for_priority(pcb->priority);
-    if (queue != NULL && queue_remove(queue, pcb)) {
+    queue_t *queue = queue_for_priority(process->priority);
+    if (queue != NULL && queue_remove(queue, process)) {
         _sti();
         return true;
     }
 
     for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
         queue_t *other_queue = scheduler.ready_queues[i];
-        if (other_queue != NULL && other_queue != queue && queue_remove(other_queue, pcb)) {
+        if (other_queue != NULL && other_queue != queue && queue_remove(other_queue, process)) {
             _sti();
             return true;
         }
@@ -113,12 +113,12 @@ bool scheduler_remove_ready(pcb_t *pcb) {
     return false;
 }
 
-pcb_t *scheduler_current(void) {
+process_t *scheduler_current(void) {
     return scheduler.current;
 }
 
-void scheduler_clear_current(pcb_t *pcb) {
-    if (pcb != NULL && scheduler.current == pcb) {
+void scheduler_clear_current(process_t *process) {
+    if (process != NULL && scheduler.current == process) {
         scheduler.current = NULL;
     }
 }
@@ -127,7 +127,7 @@ void scheduler_clear_current(pcb_t *pcb) {
 void *schedule_tick(void *current_rsp) {
     scheduler.metrics.total_ticks++;
 
-    pcb_t *running = scheduler.current;
+    process_t *running = scheduler.current;
     bool must_switch = true;
 
     if (running != NULL) {
@@ -137,10 +137,6 @@ void *schedule_tick(void *current_rsp) {
             running->state = PROCESS_STATE_READY;
         } else {
             if(running->state != PROCESS_STATE_RUNNING) {
-                if (running->state == PROCESS_STATE_YIELD) {
-                    scheduler_add_ready(running);
-                }
-                // The running process was blocked, yielded, or terminated during its time slice
                 scheduler.current = NULL;
                 process_set_running(NULL);
                 must_switch = true;
@@ -164,7 +160,7 @@ void *schedule_tick(void *current_rsp) {
 
     for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
         queue_t *queue = queue_for_priority(priority);
-        pcb_t *next = queue_pop(queue);
+        process_t *next = queue_pop(queue);
         if (next != NULL && next->state == PROCESS_STATE_READY) {
             if (next == scheduler.idle) {
                 scheduler.idle->state = PROCESS_STATE_READY;
@@ -212,48 +208,49 @@ void scheduler_for_each_ready(scheduler_iter_cb callback, void *context) {
         }
         queue_iterator_t it = queue_iter(queue);
         while (queue_iter_has_next(&it)) {
-            pcb_t *pcb = queue_iter_next(&it);
-            callback(pcb, context);
+            process_t *process = queue_iter_next(&it);
+            callback(process, context);
         }
     }
 }
 
-int32_t scheduler_set_process_priority(uint64_t pid, uint8_t priority) {
+int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
     _cli();
     if (priority < SCHEDULER_MAX_PRIORITY || priority > SCHEDULER_MIN_PRIORITY) {
         _sti();
         return -1;
     }
 
-    pcb_t *pcb = process_lookup(pid);
-    if (pcb == NULL) {
+    process_t *process = process_lookup(pid);
+    if (process == NULL) {
         _sti();
         return -1;
     }
 
-    if (pcb->state == PROCESS_STATE_TERMINATED) {
+    if (process->state == PROCESS_STATE_TERMINATED) {
         _sti();
         return -1;
     }
 
-    if (pcb == scheduler.idle) {
+    if (process == scheduler.idle) {
         _sti();
         return -1;
     }
 
-    uint8_t old_priority = pcb->priority;
+    uint8_t old_priority = process->priority;
 
-    if (pcb->state == PROCESS_STATE_READY && priority != old_priority) {
+    if (process->state == PROCESS_STATE_READY && priority != old_priority) {
         queue_t *source_queue = queue_for_priority(old_priority);
+        _cli();
         queue_t *buffer_queue = queue_create();
         if (buffer_queue == NULL) {
             _sti();
             return -1;
         }
 
-        pcb_t *entry = NULL;
+        process_t *entry = NULL;
         while ((entry = queue_pop(source_queue)) != NULL) {
-            if (entry != pcb) {
+            if (entry != process) {
                 queue_push(buffer_queue, entry);
             }
         }
@@ -264,14 +261,15 @@ int32_t scheduler_set_process_priority(uint64_t pid, uint8_t priority) {
         queue_destroy(buffer_queue, NULL);
     }
 
-    pcb->priority = priority;
+    process->priority = priority;
 
-    if (pcb->state == PROCESS_STATE_READY && priority != old_priority) {
-        queue_push(queue_for_priority(priority), pcb);
+    if (process->state == PROCESS_STATE_READY && priority != old_priority) {
+        queue_push(queue_for_priority(priority), process);
+        _cli();
     }
 
-    if (pcb == scheduler.current) {
-        pcb->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
+    if (process == scheduler.current) {
+        process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     }
     _sti();
 

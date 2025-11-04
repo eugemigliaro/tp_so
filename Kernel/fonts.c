@@ -6,8 +6,8 @@
  */
 
 #include <fonts.h>
-#include <keyboard.h>
 #include <video.h>
+#include <lib.h>
 
 /* 
     Note: An attempt was made to use the Linux kernel's Solarize.12x29.psf (https://wiki.osdev.org/PC_Screen_Font). Now only the pain remains.
@@ -27,7 +27,6 @@
 
 #include "include/font_basic_8x8.h"
 
-#define FD_STDIN  0
 #define FD_STDOUT 1
 #define FD_STDERR 2
 
@@ -80,7 +79,6 @@ void hideCursor(void);
 static void scrollBufferPositionIfNeeded(void);
 void clearPreviousCharacter(void);
 
-static uint32_t uintToBase(uint64_t value, char * buffer, uint32_t base);
 static void printBase(uint64_t value, uint32_t base);
 static inline int64_t strlen(const char * str);
 
@@ -146,23 +144,20 @@ void putChar(char ascii) {
 int32_t printToFd(int32_t fd, const char * string, int32_t count) {
     if (fd != file_descriptor) {
         switch (fd) {
-            case FD_STDIN:
-                int i = 0;
-                for ( ; i < count; i++ ) {
-                    addCharToBuffer(string[i], 1);
-                }
-                return i;
             case FD_STDOUT:
                 text_color = DEFAULT_TEXT_COLOR;
                 background_color = DEFAULT_BACKGROUND_COLOR;
                 file_descriptor = fd;
                 break;
             case FD_STDERR:
-                text_color = DEFAULT_ERROR_COLOR;
+                if (text_color == DEFAULT_TEXT_COLOR) {
+                    text_color = DEFAULT_ERROR_COLOR;
+                }
                 background_color = DEFAULT_BACKGROUND_COLOR;
                 file_descriptor = fd;
                 break;
             default:
+                return -1;
         }
     }
 
@@ -261,41 +256,9 @@ uint8_t getFontSize(void) {
 }
 
 static void printBase(uint64_t value, uint32_t base) {
-    uintToBase(value, buffer, base);
+    uint32_t length = uint_to_base(value, buffer, base);
+    buffer[length] = '\0';
     print(buffer);
-}
-
-static uint32_t uintToBase(uint64_t value, char * buffer, uint32_t base) {
-	char *p = buffer;
-	char *p1, *p2;
-	uint32_t digits = 0;
-
-	// Calculate characters for each digit
-	do
-	{
-		uint32_t remainder = value % base;
-		*p++ = (remainder < 10) ? remainder + '0' : remainder + 'A' - 10;
-		digits++;
-	}
-	while (value /= base);
-
-	// Terminate string in buffer.
-    // @todo Could this overflow?
-	*p = 0;
-
-	// Reverse string in buffer.
-	p1 = buffer;
-	p2 = p - 1;
-	while (p1 < p2)
-	{
-		char tmp = *p1;
-		*p1 = *p2;
-		*p2 = tmp;
-		p1++;
-		p2--;
-	}
-
-	return digits;
 }
 
 static inline int64_t strlen(const char * str) {

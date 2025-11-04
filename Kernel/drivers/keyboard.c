@@ -1,12 +1,8 @@
 #include <keyboard.h>
 #include <fonts.h>
 #include <interrupts.h>
-#include <cursor.h>
 #include <stddef.h>
-
-#define BUFFER_SIZE 1024
-
-#define BUFFER_IS_FULL ((to_write - to_read) % BUFFER_SIZE == BUFFER_SIZE - 1)
+#include <pipes.h>
 
 #define IS_ALPHA(c) ('a' <= (c) && (c) <= 'z') 
 #define TO_UPPER(c) (IS_ALPHA(c) ? ((c) - 'a' + 'A') : (c))
@@ -27,14 +23,7 @@
 
 #define IS_SPECIAL_KEY(c) (IS_KEYCODE(c) && !IS_PRINTABLE(c))
 
-#define INC_MOD(x, m) ((x) = ((x) + 1) % (m))
-#define SUB_MOD(a, b, m) ((a) - (b) < 0 ? (m) - (b) + (a) : (a) - (b))
-#define DEC_MOD(x, m) ((x) = SUB_MOD(x, 1, m))
-
 static uint8_t SHIFT_KEY_PRESSED, CAPS_LOCK_KEY_PRESSED, CONTROL_KEY_PRESSED;
-static int8_t buffer[BUFFER_SIZE];
-static uint16_t to_write = 0, to_read = 0;
-uint8_t keyboard_options = 0;
 
 typedef struct {
     uint8_t registered_from_kernel;
@@ -191,54 +180,10 @@ static uint8_t makeCode(uint8_t scancode) {
     return scancode & 0x7F;
 }
 
-void addCharToBuffer(int8_t ascii, uint8_t showOutput) {
-    if (ascii != TABULATOR_CHAR) {
-        buffer[to_write] = ascii;
-        INC_MOD(to_write, BUFFER_SIZE);
-        if (showOutput)
-            putChar(ascii);
-        return ;
-    }
-
-    do {
-        addCharToBuffer(' ', showOutput);
-    } while( !BUFFER_IS_FULL && getXBufferPosition() % (TAB_SIZE * DEFAULT_GLYPH_SIZE_X * getFontSize()) != 0);
-}
-
-uint16_t clearBuffer() {
-    uint16_t aux = SUB_MOD(to_write, to_read, BUFFER_SIZE);
-    if (aux == 0) return 0;
-    DEC_MOD(to_write, BUFFER_SIZE);
-    clearPreviousCharacter();
-    return aux;
-}
-
-// Halts until any key is pressed or \n is entered, depending on keyboard_options (AWAIT_RETURN_KEY)
-// This function always sets the MODIFY_BUFFER option, so keys can be consumed
-int8_t getKeyboardCharacter(enum KEYBOARD_OPTIONS ops) {
-    keyboard_options = ops | MODIFY_BUFFER;
-
-    while(
-        to_write == to_read || // always get at least one char from the buffer if empty
-        (   (keyboard_options & AWAIT_RETURN_KEY) && // wait for \n or EOF to be entered by the user
-            !(buffer[SUB_MOD(to_write, 1, BUFFER_SIZE)] == NEW_LINE_CHAR || buffer[SUB_MOD(to_write, 1, BUFFER_SIZE)] == EOF)
-        )) _hlt();
-
-    keyboard_options = 0;
-    int8_t aux = buffer[to_read];
-    INC_MOD(to_read, BUFFER_SIZE);
-    return aux;
-}
-
 uint8_t keyboardHandler(){
     uint8_t scancode = getKeyboardBuffer();
     uint8_t is_pressed = isPressed(scancode);
 
-    if(BUFFER_IS_FULL){
-        to_read = to_write = 0;
-        return scancode; // do not write to buffer anymore, subsequent keys are not processed into the buffer
-    }
-    
     switch (makeCode(scancode)) {
         case SHIFT_KEY_L:
         case SHIFT_KEY_R:
@@ -252,34 +197,37 @@ uint8_t keyboardHandler(){
                 CAPS_LOCK_KEY_PRESSED = !CAPS_LOCK_KEY_PRESSED;
             break;
 
-        return scancode;
+        default:
+            break;
     }
     
+    uint8_t make_code = makeCode(scancode);
     if (! (is_pressed && IS_KEYCODE(scancode)) ) return scancode; // ignore break or unsupported scancodes
-    
-    if ((keyboard_options & MODIFY_BUFFER) != 0) {
-        int8_t c = scancodeMap[scancode][SHIFT_KEY_PRESSED];
 
-        if (CAPS_LOCK_KEY_PRESSED == 1) {
-            c = TO_UPPER(c);
+    if (make_code == BACKSPACE_KEY) {
+        uint8_t backspace = '\b';
+        write_pipe(STDIN, &backspace, 1);
+        if (KeyFnMap[scancode].fn != 0) {
+            KeyFnMap[scancode].fn(scancode);
+        }
+        return scancode;
+    }
+
+    int8_t c = scancodeMap[scancode][SHIFT_KEY_PRESSED];
+
+    if (CAPS_LOCK_KEY_PRESSED == 1 && IS_ALPHA(c)) {
+        c = TO_UPPER(c);
+    }
+
+    if (IS_PRINTABLE(scancode)) {
+        if(c == RETURN_KEY){
+            c = NEW_LINE_CHAR;
+        } else if(c == TABULATOR_KEY){
+            c = TABULATOR_CHAR;
         }
 
-        if (IS_PRINTABLE(scancode)) {
-            if(c == RETURN_KEY){
-                c = NEW_LINE_CHAR;
-                // Handle \n on the keyboard interrupt handler, to avoid the possibility of triggering multiple \n inputs continously on the same sys_read
-                if ( (to_write != to_read) && buffer[SUB_MOD(to_write, 1, BUFFER_SIZE)] == NEW_LINE_CHAR ) {
-                    return scancode;
-                }
-            } else if(c == TABULATOR_KEY){
-                c = TABULATOR_CHAR;
-            }
-
-            addCharToBuffer(c, keyboard_options & SHOW_BUFFER_WHILE_TYPING);
-        } else if (c == BACKSPACE_KEY && to_write != to_read) {
-            DEC_MOD(to_write, BUFFER_SIZE);
-            clearPreviousCharacter();
-        }
+        uint8_t pipe_char = (uint8_t)c;
+        write_pipe(STDIN, &pipe_char, 1);
     }
 
     // Call the registered function for the key, if any

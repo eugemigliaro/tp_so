@@ -4,6 +4,7 @@ GLOBAL _hlt
 
 GLOBAL picMasterMask
 GLOBAL picSlaveMask
+GLOBAL picMasterGetMask
 
 GLOBAL _irq00Handler
 GLOBAL _irq01Handler
@@ -14,6 +15,9 @@ GLOBAL _exceptionHandler06
 
 GLOBAL register_snapshot
 GLOBAL register_snapshot_taken
+
+GLOBAL _force_scheduler_interrupt
+GLOBAL manually_triggered_timer_interrupt
 
 EXTERN irqDispatcher
 EXTERN syscallDispatcher
@@ -137,6 +141,11 @@ _sti:
 	sti
 	ret
 
+_force_scheduler_interrupt:
+    mov BYTE [manually_triggered_timer_interrupt], 0x01
+    int 0x20
+    ret
+
 picMasterMask:
 	push rbp     ; Stack frame
 	mov rbp, rsp
@@ -159,13 +168,27 @@ picSlaveMask:
 	pop rbp
 	ret
 
+picMasterGetMask:
+	in al, 0x21
+	movzx rax, al
+	ret
+
 ; 8254 Timer (Timer Tick)
 _irq00Handler:
     pushState
 
-	mov rdi, 0 ; pass argument to irqDispatcher
-	call irqDispatcher
+    mov al, [manually_triggered_timer_interrupt]
+    test al, al
+    jz .regular_tick
 
+    mov BYTE [manually_triggered_timer_interrupt], 0
+    jmp .run_scheduler
+
+.regular_tick:
+    mov rdi, 0 ; pass argument to irqDispatcher
+    call irqDispatcher
+
+.run_scheduler:
     mov rdi, rsp              ; arg: current stack frame pointer
     call schedule_tick        ; returns next stack in rax
     mov rsp, rax              ; switch to chosen process stack
@@ -258,6 +281,7 @@ section .bss
 	exception_register_snapshot resq 18
 	register_snapshot resq 18
 	register_snapshot_taken resb 1
+	manually_triggered_timer_interrupt resb 1
 
 section .rodata
 	REGISTER_SNAPSHOT_KEY_SCANCODE equ 0x58 ; F12 KEY SCANCODE
