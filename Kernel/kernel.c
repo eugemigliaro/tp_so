@@ -28,9 +28,11 @@ static void * const shellModuleAddress = (void *)0x400000;
 
 typedef int (*EntryPoint)();
 
+/*
 static void process_that_prints_its_remaining_quantum(int argc, char **argv);
 static void semaphore_worker(int argc, char **argv);
 static sem_t demo_sem;
+*/
 
 void clearBSS(void * bssAddress, uint64_t bssSize){
 	memset(bssAddress, 0, bssSize);
@@ -64,7 +66,10 @@ int main(){
 	mem_init();
 	process_table_init();
 	scheduler_init();
+	
+	/*
 	sem_init(&demo_sem, "demo_sem", 1);
+	*/
 
 	init_pipes();
 
@@ -134,6 +139,7 @@ int main(){
 	return 0;
 }
 
+/*
 static void process_that_prints_its_remaining_quantum(int argc, char **argv) {
 	uint8_t counter = 0;
 	while(1){
@@ -168,3 +174,4 @@ static void semaphore_worker(int argc, char **argv) {
 		sleep(1);
 	}
 }
+*/

@@ -10,6 +10,10 @@ int font(int argc, char *argv[]);
 int man(int argc, char *argv[]);
 int regs(int argc, char *argv[]);
 
+// Exception wrappers
+int divzero(int argc, char *argv[]);
+int invop(int argc, char *argv[]);
+
 // ========== TEST COMMANDS ==========
 // Thin wrappers around test functions from Userland/tests/
 
