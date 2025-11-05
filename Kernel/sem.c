@@ -127,11 +127,7 @@ int sem_post(sem_t *sem){
     semUnlock(&sem->lock);
 
     if (should_force_scheduler && timer_tick_is_disabled()) {
-        process_t *current = scheduler_current();
-        if (current != NULL) {
-            current->remaining_quantum = 0;
-        }
-        _force_scheduler_interrupt();
+        process_yield();
     }
 
     return ret;

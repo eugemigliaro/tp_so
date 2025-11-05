@@ -97,10 +97,9 @@ void printExceptionData(uint64_t * registers, int errorCode) {
 	_force_scheduler_interrupt();
 	
 	// Failsafe: should never reach here, but if we do, yield forever
-  while(1) {
-      current->remaining_quantum = 0;
-      _force_scheduler_interrupt();
-  }
+	while(1) {
+		process_yield();
+	}
 }
 
 static void print_err(const char *string) {

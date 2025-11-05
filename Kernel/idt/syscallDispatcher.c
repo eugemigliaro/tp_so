@@ -404,11 +404,7 @@ int32_t sys_process_kill(uint32_t pid) {
 }
 
 int32_t sys_process_yield(void) {
-	process_t *process = scheduler_current();
-	if (process != NULL) {
-		process->remaining_quantum = 0;
-	}
-	_force_scheduler_interrupt();
+	process_yield();
 	return 0;
 }
 
