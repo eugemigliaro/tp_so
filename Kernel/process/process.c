@@ -227,6 +227,14 @@ bool process_exit(process_t *process) {
     return true;
 }
 
+void process_yield(void) {
+    process_t *current = scheduler_current();
+    if (current != NULL) {
+        current->remaining_quantum = 0;
+        _force_scheduler_interrupt();
+    }
+}
+
 int32_t get_pid(void) {
     if (pcb == NULL) {
         return -1;
@@ -288,8 +296,7 @@ static void process_entry_wrapper(int argc, char **argv) {
     
     // Failsafe: should never reach here, but if we do, yield forever
     while(1) {
-        current->remaining_quantum = 0;
-        _force_scheduler_interrupt();
+        process_yield();
     }
 }
 
