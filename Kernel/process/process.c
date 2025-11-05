@@ -137,6 +137,10 @@ bool process_block(process_t *process) {
         return false;
     }
 
+    if (process->state == PROCESS_STATE_BLOCKED) {
+        return false;
+    }
+
     process->state = PROCESS_STATE_BLOCKED;
 
     return true;

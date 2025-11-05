@@ -178,8 +178,20 @@ int kill(int argc, char *argv[]) {
         return 1;
     }
     
-    // TODO: Parse argv[1] as PID and call kill syscall
-    printf("kill: not yet implemented\n");
+    int pid = atoi(argv[1]);
+    if (pid <= 0) {
+        printf("Error: PID must be a positive integer\n");
+        return 1;
+    }
+    
+    int32_t result = processKill((uint64_t)pid);
+    
+    if (result < 0) {
+        printf("Error: Could not kill process %d\n", pid);
+        return 1;
+    }
+    
+    printf("Process %d killed successfully\n", pid);
     return 0;
 }
 
@@ -189,8 +201,26 @@ int nice(int argc, char *argv[]) {
         return 1;
     }
     
-    // TODO: Parse argv[1] as PID, argv[2] as priority, call syscall
-    printf("nice: not yet implemented\n");
+    int pid = atoi(argv[1]);
+    if (pid <= 0) {
+        printf("Error: PID must be a positive integer\n");
+        return 1;
+    }
+    
+    int priority = atoi(argv[2]);
+    if (priority < 0 || priority > 5) {
+        printf("Error: Priority must be between 0 and 5\n");
+        return 1;
+    }
+    
+    int32_t result = processSetPriority((uint64_t)pid, (uint8_t)priority);
+    
+    if (result < 0) {
+        printf("Error: Could not set priority for process %d\n", pid);
+        return 1;
+    }
+    
+    printf("Process %d priority set to %d successfully\n", pid, priority);
     return 0;
 }
 
@@ -200,15 +230,35 @@ int block(int argc, char *argv[]) {
         return 1;
     }
     
-    // TODO: Parse argv[1] as PID, toggle block state
-    printf("block: not yet implemented\n");
+    int pid = atoi(argv[1]);
+    if (pid <= 0) {
+        printf("Error: PID must be a positive integer\n");
+        return 1;
+    }
+    
+    int32_t result = processBlock((uint64_t)pid);
+    
+    if (result < 0) {
+        result = processUnblock((uint64_t)pid);
+        
+        if (result < 0) {
+            printf("Error: Could not toggle block state for process %d\n", pid);
+            return 1;
+        }
+        
+        printf("Process %d unblocked successfully\n", pid);
+    } else {
+        printf("Process %d blocked successfully\n", pid);
+    }
+    
     return 0;
 }
 
 int cat(int argc, char *argv[]) {
-    // TODO: Implement - read stdin, echo to stdout
-    // Based on TP2 reference: simple loop reading and printing
-    printf("cat: not yet implemented\n");
+    for (int i = 1; i < argc; i++) {
+        printf("%s ", argv[i]);
+    }
+    printf("\n");
     return 0;
 }
 
