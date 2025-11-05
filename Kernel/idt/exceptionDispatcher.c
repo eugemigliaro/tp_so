@@ -80,15 +80,27 @@ void printExceptionData(uint64_t * registers, int errorCode) {
 		do {
 			if (read_pipe(stdin_id, &a, 1) != 1) {
 				print_err("\nError reading from keyboard input\n");
-				return;
+				break;
 			}
 		} while (a != 'r');
 	}
 
+	clear();
+	
 	picMasterMask(KEYBOARD_PIC_MASTER & TIMER_PIC_MASTER);
 	picSlaveMask(NO_INTERRUPTS);
-
-	return ;
+	
+	if (current != NULL) {
+		process_exit(current);
+	}
+	
+	_force_scheduler_interrupt();
+	
+	// Failsafe: should never reach here, but if we do, yield forever
+  while(1) {
+      current->remaining_quantum = 0;
+      _force_scheduler_interrupt();
+  }
 }
 
 static void print_err(const char *string) {
