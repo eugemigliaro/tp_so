@@ -22,11 +22,11 @@ case $OS in
     "Darwin")
         # macOS - usar CoreAudio y Hypervisor.framework
         ACCEL_FLAGS=""
-        if sysctl kern.hv_support 2>/dev/null | grep -q ": 1"; then
+        if sysctl kern.hv_support 2>/dev/null | grep -q ": 1" && qemu-system-x86_64 -accel help 2>/dev/null | grep -q "hvf"; then
             ACCEL_FLAGS="-accel hvf"
             echo "Hypervisor.framework disponible - habilitando aceleración por hardware"
         else
-            echo "Hypervisor.framework no disponible - ejecutando sin aceleración"
+            echo "Hypervisor.framework no disponible o QEMU sin soporte HVF - ejecutando sin aceleración"
         fi
         AUDIO_CONFIG="-audiodev coreaudio,id=speaker -machine pcspk-audiodev=speaker $ACCEL_FLAGS"
         echo "Configurando audio para macOS - usando CoreAudio"

@@ -7,6 +7,9 @@
 #include <test.h>
 #include <exceptions.h>
 
+#define IS_VOCAL(c) ((c) == 'a' || (c) == 'e' || (c) == 'i' || (c) == 'o' || (c) == 'u' || \
+                     (c) == 'A' || (c) == 'E' || (c) == 'I' || (c) == 'O' || (c) == 'U')
+
 // ========== Exception command wrappers ==========
 
 int divzero(int argc, char *argv[]) {
@@ -269,8 +272,29 @@ int wc(int argc, char *argv[]) {
 }
 
 int filter(int argc, char *argv[]) {
-    // TODO: Implement - filter vowels from stdin
-    printf("filter: not yet implemented\n");
+    // Si hay argumentos, procesar cada uno
+    if (argc > 1) {
+        for (int i = 1; i < argc; i++) {
+            char *str = argv[i];
+            for (int j = 0; str[j] != '\0'; j++) {
+                if (!IS_VOCAL(str[j])) {
+                    putchar(str[j]);
+                }
+            }
+            if (i < argc - 1) {
+                putchar(' ');
+            }
+        }
+        putchar('\n');
+    } else {
+        // Sin argumentos, leer de stdin (para pipes)
+        int c;
+        while ((c = getchar()) != -1) {
+            if (!IS_VOCAL(c)) {
+                putchar(c);
+            }
+        }
+    }
     return 0;
 }
 
