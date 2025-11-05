@@ -129,9 +129,29 @@ int ps(int argc, char *argv[]) {
 }
 
 int loop(int argc, char *argv[]) {
-    // TODO: Implement - loop printing PID periodically
-    // Based on TP2 reference: infinite loop with millisleep
-    printf("loop: not yet implemented\n");
+    uint32_t seconds = 1; // Default: 1 second
+    
+    if (argc > 2) {
+        printf("Usage: loop [seconds]\n");
+        return 1;
+    }
+    
+    if (argc == 2) {
+        int parsed = atoi(argv[1]);
+        if (parsed <= 0) {
+            printf("Error: seconds must be a positive integer\n");
+            return 1;
+        }
+        seconds = (uint32_t)parsed;
+    }
+    
+    int32_t pid = processGetPid();
+    
+    while (1) {
+        printf("Hello from PID: %d\n", pid);
+        sleep(seconds * 1000); // Convert to milliseconds
+    }
+    
     return 0;
 }
 
