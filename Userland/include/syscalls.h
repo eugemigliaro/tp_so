@@ -65,6 +65,8 @@ int32_t sys_process_unblock(uint64_t pid);
 int32_t sys_process_yield(void);
 int32_t sys_process_wait_pid(uint64_t pid);
 int32_t sys_process_wait_children(void);
+int32_t sys_process_give_foreground(uint64_t pid);
+int32_t sys_process_get_foreground(void);
 
 int32_t sys_exec(int32_t (*fnPtr)(void));
 

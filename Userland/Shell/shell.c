@@ -184,6 +184,24 @@ int main() {
             continue;
         }
 
+        // Check if command should run in background (ends with &)
+        int run_in_background = 0;
+        if (argc > 0 && argv[argc - 1] != NULL) {
+            size_t last_arg_len = strlen(argv[argc - 1]);
+            if (last_arg_len > 0 && argv[argc - 1][last_arg_len - 1] == '&') {
+                run_in_background = 1;
+                // Remove the & character
+                if (last_arg_len == 1) {
+                    // If the last arg is only "&", remove it
+                    argc--;
+                    argv[argc] = NULL;
+                } else {
+                    // Remove & from the end of the argument
+                    argv[argc - 1][last_arg_len - 1] = '\0';
+                }
+            }
+        }
+
         // Find and execute command
         int found = 0;
         for (int i = 0; commands[i].name != NULL; i++) {
@@ -191,11 +209,19 @@ int main() {
                 if (commands[i].isBuiltIn) {
                     last_command_output = commands[i].func(argc, argv);
                 } else {
-                    int32_t pid = processCreate((void (*)(int, char **))commands[i].func, argc, argv, 1, 0);
+                    // Create process with foreground flag based on background request
+                    uint8_t foreground = run_in_background ? 0 : 1;
+                    int32_t pid = processCreate((void (*)(int, char **))commands[i].func, argc, argv, 1, foreground);
                     if (pid < 0) {
                         printf("\e[0;31mError creating process\e[0m\n");
                     } else {
-                        last_command_output = processWaitPid(pid);
+                        if (run_in_background) {
+                            printf("[Background] PID: %d\n", pid);
+                            last_command_output = 0;
+                        } else {
+                            // Only wait if running in foreground
+                            last_command_output = processWaitPid(pid);
+                        }
                     }
                 }
                 strncpy(command_history[command_history_last], command_history_buffer, MAX_BUFFER_SIZE - 1);

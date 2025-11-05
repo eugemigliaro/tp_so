@@ -124,6 +124,14 @@ int32_t processWaitChildren(void) {
     return sys_process_wait_children();
 }
 
+int32_t processGiveForeground(uint64_t pid) {
+    return sys_process_give_foreground(pid);
+}
+
+int32_t processGetForeground(void) {
+    return sys_process_get_foreground();
+}
+
 void *semOpen(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
     return (void *)sys_sem_open(name, initial_count, create_if_missing);
 }

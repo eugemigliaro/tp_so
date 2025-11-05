@@ -89,6 +89,7 @@ int32_t sys_process_yield(void);
 int32_t sys_process_wait_pid(uint32_t pid);
 int32_t sys_process_wait_children(void);
 int32_t sys_process_give_foreground(uint64_t target_pid);
+int32_t sys_process_get_foreground(void);
 
 // Pipes and FD target syscalls
 int32_t sys_open_pipe(void);

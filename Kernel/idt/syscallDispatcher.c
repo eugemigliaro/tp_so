@@ -89,6 +89,7 @@ int64_t syscallDispatcher(Registers * registers) {
 		case 0x80000109: return sys_process_wait_pid((uint32_t) registers->rdi);
 		case 0x8000010A: return sys_process_wait_children();
 		case 0x8000010B: return sys_process_give_foreground(registers->rdi);
+		case 0x8000010C: return sys_process_get_foreground();
 		
 		default:
             return 0;
@@ -425,6 +426,10 @@ int32_t sys_process_give_foreground(uint64_t target_pid) {
 	}
 
 	return give_foreground_to((uint32_t)target_pid); 
+}
+
+int32_t sys_process_get_foreground(void) {
+	return get_foreground_process_pid();
 }
 
 // ==================================================================

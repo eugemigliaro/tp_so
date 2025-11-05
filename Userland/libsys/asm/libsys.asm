@@ -39,6 +39,8 @@ GLOBAL sys_process_unblock
 GLOBAL sys_process_yield
 GLOBAL sys_process_wait_pid
 GLOBAL sys_process_wait_children
+GLOBAL sys_process_give_foreground
+GLOBAL sys_process_get_foreground
 
 GLOBAL sys_exec
 
@@ -108,6 +110,8 @@ sys_process_unblock: sys_int80 0x80000107
 sys_process_yield: sys_int80 0x80000108
 sys_process_wait_pid: sys_int80 0x80000109
 sys_process_wait_children: sys_int80 0x8000010A
+sys_process_give_foreground: sys_int80 0x8000010B
+sys_process_get_foreground: sys_int80 0x8000010C
 
 sys_exec: sys_int80 0x800000A0
 
