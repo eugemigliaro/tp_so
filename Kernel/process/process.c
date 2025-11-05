@@ -26,6 +26,7 @@ typedef struct pcb {
     size_t process_count;
     int32_t running_pid;
     int32_t foreground_pid;
+    int32_t init_pid;
 } pcb_t;
 
 static pcb_t *pcb = NULL;
@@ -43,6 +44,7 @@ void process_table_init(void) {
     memset(pcb, 0, sizeof(pcb_t));
     pcb->running_pid = -1;
     pcb->foreground_pid = -1;
+    pcb->init_pid = -1;
 }
 
 process_t *process_lookup(uint32_t pid) {
@@ -542,6 +544,11 @@ int32_t add_first_process(void) {
         close_pipe((uint8_t)std_in);
         return -1;
     }
+    
+    if (pcb != NULL) {
+        pcb->init_pid = (int32_t)init_process->pid;
+    }
+    
     scheduler_add_ready(init_process);
     return (int32_t)init_process->pid;
 }
@@ -634,12 +641,17 @@ static void adopt_orphan_children(process_t *process) {
         return;
     }
 
-    if (process->pid == PROCESS_FIRST_PID) {
+    if (pcb != NULL && (int32_t)process->pid == pcb->init_pid) {
         return;
     }
 
     _cli();
-    process_t *init_process = process_lookup(PROCESS_FIRST_PID);
+    
+    process_t *init_process = NULL;
+    if (pcb != NULL && pcb->init_pid >= 0) {
+        init_process = process_lookup((uint32_t)pcb->init_pid);
+    }
+    
     if (init_process == NULL) {
         _sti();
         return;
