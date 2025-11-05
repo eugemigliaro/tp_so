@@ -5,6 +5,23 @@
 #include <string.h>
 #include <sys.h>
 #include <test.h>
+#include <exceptions.h>
+
+// ========== Exception command wrappers ==========
+
+int divzero(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
+    _divzero();
+    return 0;
+}
+
+int invop(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
+    _invalidopcode();
+    return 0;
+}
 
 // ========== Existing commands (adapted to argc/argv pattern) ==========
 

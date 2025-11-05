@@ -13,7 +13,9 @@
 #define SHELL_PROCESS_NAME "shell"
 #define SHELL_PROCESS_ENTRY ((void *)0x400000)
 static void init_first_process_entry(int argc, char **argv);
+/*
 static size_t process_active_count(void);
+*/
 static int32_t reap_child_process(process_t *process);
 static int shell_created = 0;
 static void adopt_orphan_children(process_t *process);
@@ -121,12 +123,14 @@ void process_set_running(process_t *process) {
     pcb->running_pid = (int32_t)process->pid;
 }
 
+/*
 static size_t process_active_count(void) {
     if (pcb == NULL) {
         return 0;
     }
     return pcb->process_count;
 }
+*/
 
 bool process_block(process_t *process) {
     if (process == NULL) {
@@ -273,6 +277,8 @@ static void process_entry_wrapper(int argc, char **argv) {
     
     int (*user_func)(int, char**) = (int (*)(int, char**))current->user_entry_point;
     int exit_code = user_func(argc, argv);
+    
+    (void)exit_code;
     
     process_exit(current);
     
