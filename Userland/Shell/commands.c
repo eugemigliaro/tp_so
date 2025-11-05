@@ -111,16 +111,21 @@ int testsemaphore(int argc, char *argv[]) {
 // ========== NEW COMMANDS for TP2 ==========
 
 int mem(int argc, char *argv[]) {
-    // TODO: Implement - call syscall to get memory state
-    printf("mem: not yet implemented\n");
-    return 0;
+    if (argc > 1) {
+        printf("Usage: mem\n");
+        return 1;
+    }
+    
+    return printMemStatus();
 }
 
 int ps(int argc, char *argv[]) {
-    // TODO: Implement - call syscall to list processes
-    // Based on TP2 reference: calls ps() syscall, formats ProcessInfo array
-    printf("ps: not yet implemented\n");
-    return 0;
+    if (argc > 1) {
+        printf("Usage: ps\n");
+        return 1;
+    }
+    
+    return processList();
 }
 
 int loop(int argc, char *argv[]) {

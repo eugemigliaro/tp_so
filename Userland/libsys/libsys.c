@@ -139,3 +139,7 @@ int32_t semWait(void *sem) {
 int32_t semPost(void *sem) {
     return sys_sem_post(sem);
 }
+
+int32_t printMemStatus(void) {
+    return sys_mem_status_print();
+}

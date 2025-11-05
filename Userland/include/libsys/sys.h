@@ -133,4 +133,6 @@ int32_t semClose(void *sem);
 int32_t semWait(void *sem);
 int32_t semPost(void *sem);
 
+int32_t printMemStatus(void);
+
 #endif
