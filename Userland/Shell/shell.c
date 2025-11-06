@@ -160,7 +160,6 @@ static int shell_main(int clear_screen) {
         clearScreen();
     }
 
-    // Clear local buffers
     buffer[0] = 0;
     buffer_dim = 0;
     command_history_buffer[0] = 0;
