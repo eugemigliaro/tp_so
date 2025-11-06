@@ -20,6 +20,14 @@ static int32_t reap_child_process(process_t *process);
 static int shell_created = 0;
 static void adopt_orphan_children(process_t *process);
 
+static process_t *ready_scan_self = NULL;
+static uint8_t ready_scan_found = 0;
+static void mark_ready_process(process_t *process, void *context) {
+    (void)context;
+    if (process != NULL && process != ready_scan_self) {
+        ready_scan_found = 1;
+    }
+}
 
 typedef struct pcb {
     process_t *processes[PROCESS_MAX_PROCESSES];
@@ -487,6 +495,13 @@ static void init_first_process_entry(int argc, char **argv) {
                 }
             }
         }
+
+        ready_scan_self = self;
+        ready_scan_found = 0;
+        scheduler_for_each_ready(mark_ready_process, NULL);
+        if (ready_scan_found) {
+            process_yield();
+        } 
     }
 }
 int32_t add_first_process(void) {
