@@ -22,6 +22,9 @@ int testprocesses(int argc, char *argv[]);
 int testpriority(int argc, char *argv[]);
 int testsemaphore(int argc, char *argv[]);
 
+#define MVAR_MAX_READERS 10
+#define MVAR_MAX_WRITERS 10
+
 // a implementar
 int mem(int argc, char *argv[]);
 int ps(int argc, char *argv[]);

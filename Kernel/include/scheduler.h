@@ -8,6 +8,7 @@
 #define SCHEDULER_MAX_PRIORITY 0
 #define SCHEDULER_MIN_PRIORITY 5
 #define SCHEDULER_PRIORITY_LEVELS (SCHEDULER_MIN_PRIORITY - SCHEDULER_MAX_PRIORITY + 1)
+#define SCHEDULER_AGING_THRESHOLD 32
 
 typedef struct scheduler_metrics {
     uint64_t total_ticks;

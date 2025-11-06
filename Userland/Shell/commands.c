@@ -298,9 +298,75 @@ int filter(int argc, char *argv[]) {
     return 0;
 }
 
-int mvar(int argc, char *argv[]) {
-    // TODO: Implement - multiple readers/writers with semaphores
-    // This will spawn multiple processes
-    printf("mvar: not yet implemented\n");
+char mvar_var[1] = {0};
+void *mvar_empty_signal = NULL;
+void *mvar_full_signal = NULL;
+
+char writer_ids[MVAR_MAX_WRITERS] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'};
+char reader_ids[MVAR_MAX_READERS] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
+
+static void mvar_writer(int argc, char **argv) {
+    (void)argc;
+    char *id = argv[1];
+
+    for (int i = 0; i < 5; i++) {
+        uint32_t sleep_ms = (rand() % 3000) + 1000; // Sleep between 1 and 4 seconds
+        sleep(sleep_ms);
+        semWait(mvar_empty_signal);
+        mvar_var[0] = id[0];
+        semPost(mvar_full_signal);
+    }
+
+    return;
+}
+
+static void mvar_reader(int argc, char **argv) {
+    (void)argc;
+    char *id = argv[1];
+
+    for (int i = 0; i < 5; i++) {
+        uint32_t sleep_ms = (rand() % 3000) + 1000; // Sleep between 1 and 4 seconds
+        sleep(sleep_ms);
+        semWait(mvar_full_signal);
+        char value = mvar_var[0];
+        printf("[Reader %c] Read value: %c\n", id[0], value);
+        semPost(mvar_empty_signal);
+    }
+
+    return;
+}
+
+int mvar(int argc, char *argv[]){
+    if (argc < 3) {
+        printf("Usage: mvar <escritores> <lectores>\n");
+        return 1;
+    }
+
+    int writers = atoi(argv[1]);
+    int readers = atoi(argv[2]);
+
+    if (writers <= 0 || readers <= 0) {
+        printf("Error: Both <escritores> and <lectores> must be positive integers\n");
+        return 1;
+    }
+
+    mvar_empty_signal = semOpen("mvar_empty", 1, 1);
+    mvar_full_signal = semOpen("mvar_full", 0, 1);
+
+    if (writers > MVAR_MAX_WRITERS || readers > MVAR_MAX_READERS) {
+        printf("Error: Too many readers or writers, maximum is 10 for both\n");
+        return 1;
+    }
+
+    for(int i = 0; i < writers; i++) {
+        char *writer_argv[] = { "mvar_writer", &writer_ids[i], NULL };
+        processCreate(mvar_writer, 2, writer_argv, 1, 1);
+    }
+
+    for(int i = 0; i < readers; i++) {
+        char *reader_argv[] = { "mvar_reader", &reader_ids[i], NULL };
+        processCreate(mvar_reader, 2, reader_argv, 1, 1);
+    }
+
     return 0;
 }

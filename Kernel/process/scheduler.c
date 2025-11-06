@@ -59,6 +59,41 @@ static uint8_t priority_from_usage(uint8_t ticks_used) {
     return (uint8_t)(SCHEDULER_MAX_PRIORITY + levels - 1);
 }
 
+static bool scheduler_should_age(process_t *process) {
+    if (process == NULL) {
+        return false;
+    }
+    if (process == scheduler.idle) {
+        return false;
+    }
+    if (process->priority <= SCHEDULER_MAX_PRIORITY) {
+        return false;
+    }
+
+    uint64_t waited = scheduler.metrics.total_ticks - process->ready_since_tick;
+    return waited >= SCHEDULER_AGING_THRESHOLD;
+}
+
+static void scheduler_age_ready(void) {
+    for (uint8_t priority = SCHEDULER_MAX_PRIORITY + 1; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
+        queue_t *queue = queue_for_priority(priority);
+        size_t items = queue_size(queue);
+        for (size_t i = 0; i < items; i++) {
+            process_t *process = queue_pop(queue);
+            if (process == NULL) {
+                break;
+            }
+            if (process->state == PROCESS_STATE_READY && scheduler_should_age(process)) {
+                process->priority--;
+                process->ready_since_tick = scheduler.metrics.total_ticks;
+                queue_push(queue_for_priority(process->priority), process);
+            } else {
+                queue_push(queue, process);
+            }
+        }
+    }
+}
+
 void scheduler_init(void) {
     _cli();
     for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
@@ -84,6 +119,7 @@ void scheduler_add_ready(process_t *process) {
     }
     process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     process->last_quantum_ticks = 0;
+    process->ready_since_tick = scheduler.metrics.total_ticks;
     queue_push(queue_for_priority(process->priority), process);
     _sti();
 }
@@ -157,6 +193,8 @@ void *schedule_tick(void *current_rsp) {
         process_set_running(scheduler.current);
         return current_rsp;
     }
+
+    scheduler_age_ready();
 
     for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY; priority++) {
         queue_t *queue = queue_for_priority(priority);
