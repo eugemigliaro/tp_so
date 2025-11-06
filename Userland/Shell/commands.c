@@ -266,13 +266,25 @@ int cat(int argc, char *argv[]) {
 }
 
 int wc(int argc, char *argv[]) {
-    // TODO: Implement - count newlines from stdin
-    printf("wc: not yet implemented\n");
+    (void)argc;
+    (void)argv;
+    
+    int c, lines = 0;
+    while (1) {
+        c = getchar();
+        if (c == -1) {
+            break;
+        }
+        if (c == '\n') {
+            lines++;
+        }
+    }
+    printf("%d line%s in total\n", lines, lines == 1 ? "" : "s");
     return 0;
 }
 
 int filter(int argc, char *argv[]) {
-    // Si hay argumentos, procesar cada uno
+    // Si hay argumentos
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             char *str = argv[i];
@@ -287,7 +299,7 @@ int filter(int argc, char *argv[]) {
         }
         putchar('\n');
     } else {
-        // Sin argumentos, leer de stdin (para pipes)
+        // Sin argumentos, lee de stdin 
         int c;
         while ((c = getchar()) != -1) {
             if (!IS_VOCAL(c)) {
