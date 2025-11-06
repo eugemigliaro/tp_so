@@ -37,13 +37,19 @@ case $OS in
             # AUDIO_CONFIG="-audiodev pa,id=speaker -machine pcspk-audiodev=speaker"
         else
             # Linux nativo - habilitar KVM si está disponible
-            echo "Aceleración por hardware deshabilitada (sin KVM)"
+            KVM_FLAGS=""
+            if [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+                KVM_FLAGS="-enable-kvm"
+                echo "KVM disponible - habilitando aceleración por hardware"
+            else
+                echo "KVM no disponible - ejecutando sin aceleración"
+            fi
             
             if command -v pulseaudio >/dev/null 2>&1; then
-                AUDIO_CONFIG="-audiodev pa,id=speaker -machine pcspk-audiodev=speaker"
+                AUDIO_CONFIG="-audiodev pa,id=speaker -machine pcspk-audiodev=speaker $KVM_FLAGS"
                 echo "Configurando audio para Linux con PulseAudio"
             else
-                AUDIO_CONFIG="-audiodev alsa,id=speaker,out.try-poll=on -machine pcspk-audiodev=speaker"
+                AUDIO_CONFIG="-audiodev alsa,id=speaker,out.try-poll=on -machine pcspk-audiodev=speaker $KVM_FLAGS"
                 echo "Configurando audio para Linux - usando ALSA"
             fi
         fi
