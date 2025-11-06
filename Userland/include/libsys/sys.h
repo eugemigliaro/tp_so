@@ -127,6 +127,8 @@ int32_t processUnblock(uint64_t pid);
 int32_t processYield(void);
 int32_t processWaitPid(uint64_t pid);
 int32_t processWaitChildren(void);
+int32_t processGiveForeground(uint64_t pid);
+int32_t processGetForeground(void);
 
 void *semOpen(const char *name, uint32_t initial_count, uint8_t create_if_missing);
 int32_t semClose(void *sem);

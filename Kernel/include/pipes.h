@@ -32,4 +32,6 @@ void reset_pipes(void);
 
 void set_next_id(uint8_t id);
 
+void clear_pipe(uint8_t id);
+
 #endif

@@ -481,7 +481,16 @@ static void init_first_process_entry(int argc, char **argv) {
                     continue;
                 }
                 if (child->state == PROCESS_STATE_TERMINATED) {
+                    int was_main_shell = (strcmp(child->name, SHELL_PROCESS_NAME) == 0) && ((int32_t)child->ppid == self->pid);
                     reap_child_process(child);
+                    if (was_main_shell) {
+                        char *shell_argv[] = {SHELL_PROCESS_NAME, NULL};
+                        process_t *new_shell =
+                            createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
+                        if (new_shell != NULL) {
+                            scheduler_add_ready(new_shell);
+                        }
+                    }
                 } else {
                     queue_push(self->children, child);
                 }

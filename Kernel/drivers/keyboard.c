@@ -3,6 +3,8 @@
 #include <interrupts.h>
 #include <stddef.h>
 #include <pipes.h>
+#include <process.h>
+#include <video.h>
 
 #define IS_ALPHA(c) ('a' <= (c) && (c) <= 'z') 
 #define TO_UPPER(c) (IS_ALPHA(c) ? ((c) - 'a' + 'A') : (c))
@@ -214,6 +216,31 @@ uint8_t keyboardHandler(){
     }
 
     int8_t c = scancodeMap[scancode][SHIFT_KEY_PRESSED];
+
+    if (CONTROL_KEY_PRESSED) {
+        if (make_code == C_KEY) {
+            int32_t fg_pid = get_foreground_process_pid();
+            if (fg_pid > 0) {
+                process_t *fg_process = process_lookup((uint32_t)fg_pid);
+                if (fg_process != NULL) {
+                    process_exit(fg_process);
+                    clear_pipe(STDIN);
+                    print("\n^C");
+                }
+            }
+            if (KeyFnMap[scancode].fn != 0) {
+                KeyFnMap[scancode].fn(scancode);
+            }
+            return scancode;
+        } else if (make_code == D_KEY) {
+            uint8_t ctrl_d = 0x04;
+            write_pipe(STDIN, &ctrl_d, 1);
+            if (KeyFnMap[scancode].fn != 0) {
+                KeyFnMap[scancode].fn(scancode);
+            }
+            return scancode;
+        }
+    }
 
     if (CAPS_LOCK_KEY_PRESSED == 1 && IS_ALPHA(c)) {
         c = TO_UPPER(c);

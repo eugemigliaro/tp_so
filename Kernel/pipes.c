@@ -289,3 +289,25 @@ void reset_pipes(void) {
 void set_next_id(uint8_t id) {
 	next_pipe_id = id;
 }
+
+void clear_pipe(uint8_t id) {
+	if (id >= MAX_PIPES || pipes[id] == NULL) {
+		return;
+	}
+
+	pipe_t pipe = pipes[id];
+	
+	sem_wait(pipe->mutex);
+	
+	pipe->read_idx = 0;
+	pipe->write_idx = 0;
+	pipe->data_count = 0;
+	
+	int writers_to_wake = sem_waiting_count(pipe->can_write);
+	
+	sem_post(pipe->mutex);
+	
+	while (writers_to_wake-- > 0) {
+		sem_post(pipe->can_write);
+	}
+}

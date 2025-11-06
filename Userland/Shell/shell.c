@@ -17,6 +17,9 @@
 #define HISTORY_SIZE 10
 #define MAX_ARGS 64
 
+#define CTRL_C 0x03
+#define CTRL_D 0x04
+
 #define INC_MOD(x, m) x = (((x) + 1) % (m))
 #define SUB_MOD(a, b, m) ((a) - (b) < 0 ? (m) - (b) + (a) : (a) - (b))
 #define DEC_MOD(x, m) ((x) = SUB_MOD(x, 1, m))
@@ -158,7 +161,27 @@ int main() {
         signed char c;
 
 		while ((c = getchar()) != '\n') {
+			if (c == CTRL_C) {
+				emptyScreenBuffer();
+				break;
+			}
+			
+			if (c == CTRL_D) {
+				if (buffer_dim == 0) {
+					printf("\n^D");
+					return 0;
+				}
+				continue;
+			}
+			
 			appendCharacter(c);
+		}
+
+		if (c != '\n') {
+			buffer[0] = 0;
+			command_history_buffer[0] = 0;
+			buffer_dim = 0;
+			continue;
 		}
 
 		putchar('\n');
