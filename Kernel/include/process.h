@@ -36,6 +36,7 @@ typedef struct process {
     context_t context; //should this be a pointer?
     uint8_t remaining_quantum;
     uint8_t last_quantum_ticks;
+    uint64_t ready_since_tick;
     void *stack_base;
     sem_t *exit_sem;
     queue_t *children;

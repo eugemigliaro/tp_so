@@ -684,9 +684,7 @@ static void adopt_orphan_children(process_t *process) {
 
 int32_t process_wait_pid(uint32_t pid) { 
 
-    _cli();
     process_t * current = scheduler_current();
-    _sti();
 
     if (current == NULL) {
         return -1;
@@ -717,9 +715,7 @@ int32_t process_wait_pid(uint32_t pid) {
 
 int32_t process_wait_children(void) {
 
-    _cli();
     process_t *current = scheduler_current();
-    _sti();
 
     if(current == NULL) {
         return -1;
