@@ -10,6 +10,9 @@
 #define IS_VOCAL(c) ((c) == 'a' || (c) == 'e' || (c) == 'i' || (c) == 'o' || (c) == 'u' || \
                      (c) == 'A' || (c) == 'E' || (c) == 'I' || (c) == 'O' || (c) == 'U')
 
+#define PIPE_END_OF_INPUT 4
+#define PIPE_READ_ERROR (-1)
+
 // ========== Exception command wrappers ==========
 
 int divzero(int argc, char *argv[]) {
@@ -263,6 +266,7 @@ int cat(int argc, char *argv[]) {
     }
     printf("\n");
     return 0;
+
 }
 
 int wc(int argc, char *argv[]) {
@@ -270,9 +274,8 @@ int wc(int argc, char *argv[]) {
     (void)argv;
     
     int c, lines = 0;
-    while (1) {
-        c = getchar();
-        if (c == -1) {
+    while ((c = getchar()) != PIPE_END_OF_INPUT) {
+        if (c == PIPE_READ_ERROR) {
             break;
         }
         if (c == '\n') {
@@ -299,13 +302,13 @@ int filter(int argc, char *argv[]) {
         }
         putchar('\n');
     } else {
-        // Sin argumentos, lee de stdin 
-        int c;
-        while ((c = getchar()) != -1) {
-            if (!IS_VOCAL(c)) {
-                putchar(c);
-            }
-        }
+		// Sin argumentos, lee de stdin hasta fin de entrada
+		int c;
+		while ((c = getchar()) != PIPE_END_OF_INPUT && c != PIPE_READ_ERROR) {
+			if (!IS_VOCAL(c)) {
+				putchar(c);
+			}
+		}
     }
     return 0;
 }

@@ -134,7 +134,7 @@ int read_pipe(uint8_t id, uint8_t * buffer, uint64_t bytes) {
 		if (pipe->data_count == 0) {
 			if (pipe->attached_count <= 1) {
 				sem_post(pipe->mutex);
-				break;
+				return 0;
 			}
 
 			pipe->waiting_readers++;
@@ -256,7 +256,6 @@ int close_pipe(uint8_t id) {
 
 	uint8_t attached = pipe->attached_count;
 	int release_waiters = (!is_std && attached <= 1);
-	int should_delete = (attached == 0) || (is_std && attached == 1);
 	int readers_to_wake = release_waiters ? sem_waiting_count(pipe->can_read) : 0;
 	int writers_to_wake = release_waiters ? sem_waiting_count(pipe->can_write) : 0;
 
@@ -270,10 +269,9 @@ int close_pipe(uint8_t id) {
 		sem_post(pipe->can_write);
 	}
 
-	if (should_delete) {
+	if (!is_std && attached == 0) {
 		destroy_pipe(id, pipe);
 	}
-
 	return 0;
 }
 

@@ -132,6 +132,14 @@ int32_t processGetForeground(void) {
     return sys_process_get_foreground();
 }
 
+int32_t openPipe(void) {
+    return sys_open_pipe();
+}
+
+int32_t setFdTargets(uint64_t read_target, uint64_t write_target, uint64_t error_target) {
+    return sys_set_fd_targets(read_target, write_target, error_target);
+}
+
 void *semOpen(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
     return (void *)sys_sem_open(name, initial_count, create_if_missing);
 }

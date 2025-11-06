@@ -129,6 +129,8 @@ int32_t processWaitPid(uint64_t pid);
 int32_t processWaitChildren(void);
 int32_t processGiveForeground(uint64_t pid);
 int32_t processGetForeground(void);
+int32_t openPipe(void);
+int32_t setFdTargets(uint64_t read_target, uint64_t write_target, uint64_t error_target);
 
 void *semOpen(const char *name, uint32_t initial_count, uint8_t create_if_missing);
 int32_t semClose(void *sem);

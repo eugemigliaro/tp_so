@@ -110,10 +110,6 @@ void process_unregister(uint32_t pid) {
         pcb->running_pid = -1;
     }
 
-    unattach_from_pipe(process->fd_targets[STDIN], (int)pid);
-    unattach_from_pipe(process->fd_targets[STDOUT], (int)pid);
-    unattach_from_pipe(process->fd_targets[STDERR], (int)pid);
-
     pcb->processes[index] = NULL;
     if (pcb->process_count > 0) {
         pcb->process_count--;
@@ -209,6 +205,10 @@ bool process_exit(process_t *process) {
         return false;
     }
     
+    uint8_t stdin_id = process->fd_targets[STDIN];
+    uint8_t stdout_id = process->fd_targets[STDOUT];
+    uint8_t stderr_id = process->fd_targets[STDERR];
+    
     _cli();
     
     if (process->state == PROCESS_STATE_READY) {
@@ -227,6 +227,14 @@ bool process_exit(process_t *process) {
     int should_force_switch = (pcb != NULL && pcb->running_pid == (int32_t)process->pid);
     
     _sti();
+
+    unattach_from_pipe(stdin_id, (int)process->pid);
+    unattach_from_pipe(stdout_id, (int)process->pid);
+    unattach_from_pipe(stderr_id, (int)process->pid);
+
+    close_pipe(stdin_id);
+    close_pipe(stdout_id);
+    close_pipe(stderr_id);
     
     sem_post(process->exit_sem);
     

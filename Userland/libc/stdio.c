@@ -195,7 +195,12 @@ void perror(const char * s1) {
 
 int getchar(void) {
     signed char c[1];
-    while(sys_read(FD_STDIN, c, 1) == -1);
+    int32_t read_bytes;
+    while ((read_bytes = sys_read(FD_STDIN, c, 1)) == -1)
+        ;
+    if (read_bytes == 0) {
+        return -1;
+    }
     return c[0];
 }
 
