@@ -137,4 +137,6 @@ int32_t semPost(void *sem);
 
 int32_t printMemStatus(void);
 
+int32_t clearPipe(uint8_t pipe_id);
+
 #endif

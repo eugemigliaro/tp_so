@@ -225,7 +225,7 @@ uint8_t keyboardHandler(){
                 if (fg_process != NULL) {
                     process_exit(fg_process);
                     clear_pipe(STDIN);
-                    print("\n^C");
+                    print("\n^C\n");
                 }
             }
             if (KeyFnMap[scancode].fn != 0) {

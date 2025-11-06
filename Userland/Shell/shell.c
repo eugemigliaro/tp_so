@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <sys.h>
 #include <exceptions.h>
@@ -30,6 +31,7 @@ static int buffer_dim = 0;
 // Built-in commands (POSIX built-ins or shell-specific)
 static int exit(int argc, char *argv[]);
 static int history(int argc, char *argv[]);
+static int sh_wrapper(int argc, char *argv[]);
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode);
 static void printNextCommand(enum REGISTERABLE_KEYS scancode);
@@ -113,6 +115,10 @@ Command commands[] = {
 	 .func = regs,
 	 .description = "Prints the register snapshot, if any",
 	 .isBuiltIn = 0},
+	{.name = "sh",
+	 .func = sh_wrapper,
+	 .description = "Creates a new shell process",
+	 .isBuiltIn = 0},
 	{.name = "time",
 	 .func = time,
 	 .description = "Prints the current time",
@@ -149,14 +155,23 @@ uint8_t command_history_last = 0;
 
 static uint64_t last_command_output = 0;
 
-int main() {
-    clearScreen();
+static int shell_main(int clear_screen) {
+    if (clear_screen) {
+        clearScreen();
+    }
+
+    // Clear local buffers
+    buffer[0] = 0;
+    buffer_dim = 0;
+    command_history_buffer[0] = 0;
 
     registerKey(KP_UP_KEY, printPreviousCommand);
     registerKey(KP_DOWN_KEY, printNextCommand);
 
+    int32_t my_pid = processGetPid();
+
 	while (1) {
-        printf("\e[0mshell \e[0;32m$\e[0m ");
+        printf("\e[0mshell(%d) \e[0;32m$\e[0m ", my_pid);
 
         signed char c;
 
@@ -168,7 +183,7 @@ int main() {
 			
 			if (c == CTRL_D) {
 				if (buffer_dim == 0) {
-					printf("\n^D");
+					printf("\n^D\n");
 					return 0;
 				}
 				continue;
@@ -272,6 +287,17 @@ int main() {
 
     __builtin_unreachable();
     return 0;
+}
+
+int main(void) {
+    return shell_main(1);
+}
+
+static int sh_wrapper(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
+    clearPipe(0);
+    return shell_main(0);
 }
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode) {
