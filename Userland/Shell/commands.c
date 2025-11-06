@@ -266,13 +266,25 @@ int cat(int argc, char *argv[]) {
 }
 
 int wc(int argc, char *argv[]) {
-    // TODO: Implement - count newlines from stdin
-    printf("wc: not yet implemented\n");
+    (void)argc;
+    (void)argv;
+    
+    int c, lines = 0;
+    while (1) {
+        c = getchar();
+        if (c == -1) {
+            break;
+        }
+        if (c == '\n') {
+            lines++;
+        }
+    }
+    printf("%d line%s in total\n", lines, lines == 1 ? "" : "s");
     return 0;
 }
 
 int filter(int argc, char *argv[]) {
-    // Si hay argumentos, procesar cada uno
+    // Si hay argumentos
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             char *str = argv[i];
@@ -287,7 +299,7 @@ int filter(int argc, char *argv[]) {
         }
         putchar('\n');
     } else {
-        // Sin argumentos, leer de stdin (para pipes)
+        // Sin argumentos, lee de stdin 
         int c;
         while ((c = getchar()) != -1) {
             if (!IS_VOCAL(c)) {
@@ -302,8 +314,13 @@ char mvar_var[1] = {0};
 void *mvar_empty_signal = NULL;
 void *mvar_full_signal = NULL;
 
-char writer_ids[MVAR_MAX_WRITERS] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'};
-char reader_ids[MVAR_MAX_READERS] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
+const char *const writer_ids[MVAR_MAX_WRITERS] = {
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J"
+};
+
+const char *const reader_ids[MVAR_MAX_READERS] = {
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"
+};
 
 static void mvar_writer(int argc, char **argv) {
     (void)argc;
@@ -317,6 +334,8 @@ static void mvar_writer(int argc, char **argv) {
         semPost(mvar_full_signal);
     }
 
+    printf("[Writer %c] Finished\n", id[0]);
+
     return;
 }
 
@@ -329,9 +348,12 @@ static void mvar_reader(int argc, char **argv) {
         sleep(sleep_ms);
         semWait(mvar_full_signal);
         char value = mvar_var[0];
-        printf("[Reader %c] Read value: %c\n", id[0], value);
+        char id_char = id[0];
+        printf("[Reader %c] Read value: %c\n", id_char, value);
         semPost(mvar_empty_signal);
     }
+
+    printf("[Reader %c] Finished\n", id[0]);
 
     return;
 }
@@ -358,15 +380,24 @@ int mvar(int argc, char *argv[]){
         return 1;
     }
 
-    for(int i = 0; i < writers; i++) {
-        char *writer_argv[] = { "mvar_writer", &writer_ids[i], NULL };
-        processCreate(mvar_writer, 2, writer_argv, 1, 1);
+    for (int i = 0; i < writers; i++) {
+        char *writer_argv[] = { "mvar_writer", (char *)writer_ids[i], NULL };
+        processCreate(mvar_writer, 2, writer_argv, 1, 0);
     }
 
-    for(int i = 0; i < readers; i++) {
-        char *reader_argv[] = { "mvar_reader", &reader_ids[i], NULL };
-        processCreate(mvar_reader, 2, reader_argv, 1, 1);
+    for (int i = 0; i < readers; i++) {
+        char *reader_argv[] = { "mvar_reader", (char *)reader_ids[i], NULL };
+        processCreate(mvar_reader, 2, reader_argv, 1, 0);
     }
+
+    if (processWaitChildren() < 0) {
+        printf("Error waiting for child processes\n");
+    }
+
+    semClose(mvar_empty_signal);
+    semClose(mvar_full_signal);
+    mvar_empty_signal = NULL;
+    mvar_full_signal = NULL;
 
     return 0;
 }
