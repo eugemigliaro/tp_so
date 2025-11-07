@@ -35,6 +35,7 @@ typedef struct pcb {
     int32_t running_pid;
     int32_t foreground_pid;
     int32_t init_pid;
+    int32_t main_shell_pid;
 } pcb_t;
 
 static pcb_t *pcb = NULL;
@@ -53,6 +54,7 @@ void process_table_init(void) {
     pcb->running_pid = -1;
     pcb->foreground_pid = -1;
     pcb->init_pid = -1;
+    pcb->main_shell_pid = -1;
 }
 
 process_t *process_lookup(uint32_t pid) {
@@ -362,6 +364,30 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->fd_targets[STDOUT] = stdout_target;
     process->fd_targets[STDERR] = stderr_target;
 
+    size_t argv_count = (size_t)(process->argc + 1);
+    process->argv = (char **)mem_alloc(sizeof(char *) * argv_count);
+    if (process->argv == NULL) {
+        process_free_memory(process);
+        return NULL;
+    }
+    memset(process->argv, 0, sizeof(char *) * argv_count);
+
+    for (int i = 0; i < process->argc; i++) {
+        size_t arg_len = strlen(argv[i]);
+        process->argv[i] = (char *)mem_alloc(sizeof(char) * (arg_len + 1));
+        if (process->argv[i] == NULL) {
+            process_free_memory(process);
+            return NULL;
+        }
+        strcpy(process->argv[i], argv[i]);
+        process->argv[i][arg_len] = '\0';
+    }
+    process->argv[process->argc] = NULL;
+
+    if (process->argc > 0) {
+        process->name = process->argv[0]; // Set process name to first argument 
+    }
+
     void *stack_base = mem_alloc(PROCESS_STACK_SIZE);
     if (stack_base == NULL) {
         process_free_memory(process);
@@ -370,29 +396,9 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->stack_base = stack_base;
 
     void *stack_top = (uint8_t *)stack_base + PROCESS_STACK_SIZE - sizeof(uint64_t);
-    uint64_t prepared_rsp = (uint64_t)stackInit(stack_top, (void *)process_entry_wrapper, argc, argv);
+    uint64_t prepared_rsp =
+        (uint64_t)stackInit(stack_top, (void *)process_entry_wrapper, process->argc, process->argv);
     process->context.rsp = prepared_rsp;
-
-    process->argv = (char **)mem_alloc(sizeof(char *) * process->argc);
-    if (process->argv == NULL) {
-        process_free_memory(process);
-        return NULL;
-    }
-    memset(process->argv, 0, sizeof(char *) * process->argc);
-
-    for (int i = 0; i < process->argc; i++) {
-        process->argv[i] = (char *)mem_alloc(sizeof(char) * (strlen(argv[i]) + 1));
-        if (process->argv[i] == NULL) {
-            process_free_memory(process);
-            return NULL;
-        }
-        strcpy(process->argv[i], argv[i]);
-        process->argv[i][strlen(argv[i])] = '\0';
-    }
-
-    if (process->argc > 0) {
-        process->name = process->argv[0]; // Set process name to first argument 
-    }
 
     process->exit_sem = sem_create();
     if (process->exit_sem == NULL) {
@@ -483,6 +489,9 @@ static void init_first_process_entry(int argc, char **argv) {
             if (shell != NULL) {
                 scheduler_add_ready(shell);
                 shell_created = 1;
+                if (pcb != NULL) {
+                    pcb->main_shell_pid = (int32_t)shell->pid;
+                }
             }
         }
     }
@@ -497,7 +506,7 @@ static void init_first_process_entry(int argc, char **argv) {
                     continue;
                 }
                 if (child->state == PROCESS_STATE_TERMINATED) {
-                    int was_main_shell = (strcmp(child->name, SHELL_PROCESS_NAME) == 0) && ((int32_t)child->ppid == self->pid);
+                    int was_main_shell = (pcb != NULL) && ((int32_t)child->pid == pcb->main_shell_pid);
                     reap_child_process(child);
                     if (was_main_shell) {
                         char *shell_argv[] = {SHELL_PROCESS_NAME, NULL};
@@ -505,6 +514,7 @@ static void init_first_process_entry(int argc, char **argv) {
                             createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
                         if (new_shell != NULL) {
                             scheduler_add_ready(new_shell);
+                            pcb->main_shell_pid = (int32_t)new_shell->pid;
                         }
                     }
                 } else {

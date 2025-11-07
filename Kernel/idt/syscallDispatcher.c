@@ -70,6 +70,7 @@ int64_t syscallDispatcher(Registers * registers) {
 
 	case 0x80000130: return sys_open_pipe();
 	case 0x80000131: return sys_set_fd_targets((uint64_t)registers->rdi, (uint64_t)registers->rsi, (uint64_t)registers->rdx);
+	case 0x80000132: return sys_clear_pipe((uint64_t)registers->rdi);
 
 	case 0x80000100: return sys_process_create(
 			(void (*)(int, char **)) registers->rdi,
@@ -438,4 +439,9 @@ int32_t sys_open_pipe(void) {
 
 int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target, uint64_t error_target) {
     return set_fd_targets((uint8_t)read_target, (uint8_t)write_target, (uint8_t)error_target);
+}
+
+int32_t sys_clear_pipe(uint64_t pipe_id) {
+    clear_pipe((uint8_t)pipe_id);
+    return 0;
 }

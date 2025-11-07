@@ -94,5 +94,6 @@ int32_t sys_process_get_foreground(void);
 // Pipes and FD target syscalls
 int32_t sys_open_pipe(void);
 int32_t sys_set_fd_targets(uint64_t read_target, uint64_t write_target, uint64_t error_target);
+int32_t sys_clear_pipe(uint64_t pipe_id);
 
 #endif

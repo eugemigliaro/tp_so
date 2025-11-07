@@ -159,3 +159,7 @@ int32_t semPost(void *sem) {
 int32_t printMemStatus(void) {
     return sys_mem_status_print();
 }
+
+int32_t clearPipe(uint8_t pipe_id) {
+    return sys_clear_pipe(pipe_id);
+}

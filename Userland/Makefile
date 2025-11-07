@@ -15,6 +15,6 @@ clean:
 	cd Shell; make clean
 	cd libc; make clean
 	cd libsys; make clean
-	rm -rf *.bin *.o *.so *.a
+	rm -rf *.bin *.elf *.o *.so *.a
 
 .PHONY: libc libsys shell all clean

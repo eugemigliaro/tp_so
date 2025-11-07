@@ -53,6 +53,7 @@ GLOBAL sys_get_register_snapshot
 
 GLOBAL sys_open_pipe
 GLOBAL sys_set_fd_targets
+GLOBAL sys_clear_pipe
 
 section .text
 
@@ -126,3 +127,4 @@ sys_get_register_snapshot: sys_int80 0x800000E0
 
 sys_open_pipe: sys_int80 0x80000130
 sys_set_fd_targets: sys_int80 0x80000131
+sys_clear_pipe: sys_int80 0x80000132
