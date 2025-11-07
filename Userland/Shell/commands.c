@@ -115,20 +115,38 @@ int regs(int argc, char *argv[]) {
 // ========== TEST COMMANDS ==========
 // These are thin wrappers that call the actual test functions
 
+static inline void adjust_test_args(int *argc, char ***argv) {
+    if (argc == NULL || argv == NULL) {
+        return;
+    }
+    if (*argc > 0) {
+        (*argc)--;
+    }
+    if (*argc > 0) {
+        (*argv)++;
+    } else {
+        *argv = NULL;
+    }
+}
+
 int testmm(int argc, char *argv[]) {
-    return (int)test_mm(argc, argv);
+    adjust_test_args(&argc, &argv);
+    return (int)test_mm((uint64_t)argc, argv);
 }
 
 int testprocesses(int argc, char *argv[]) {
-    return (int)test_processes(argc, argv);
+    adjust_test_args(&argc, &argv);
+    return (int)test_processes((uint64_t)argc, argv);
 }
 
 int testpriority(int argc, char *argv[]) {
-    return (int)test_prio(argc, argv);
+    adjust_test_args(&argc, &argv);
+    return (int)test_prio((uint64_t)argc, argv);
 }
 
 int testsemaphore(int argc, char *argv[]) {
-    return (int)test_semaphore(argc, argv);
+    adjust_test_args(&argc, &argv);
+    return (int)test_semaphore((uint64_t)argc, argv);
 }
 
 // ========== NEW COMMANDS for TP2 ==========
