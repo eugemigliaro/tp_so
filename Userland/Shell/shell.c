@@ -20,27 +20,6 @@
 #define MAX_ARGS 64
 #define MAX_ARGUMENT_COUNT MAX_ARGS
 #define MAX_ARGUMENT_SIZE 256
-#include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <ctype.h>
-
-#include <sys.h>
-#include <exceptions.h>
-
-#include "commands.h"
-#include "shell.h"
-
-#ifdef ANSI_4_BIT_COLOR_SUPPORT
-    #include <ansiColors.h>
-#endif
-
-#define MAX_BUFFER_SIZE 1024
-#define HISTORY_SIZE 10
-#define MAX_ARGS 64
-#define MAX_ARGUMENT_COUNT MAX_ARGS
-#define MAX_ARGUMENT_SIZE 256
 #define MAX_PIPE_COMMANDS 2
 
 #define CTRL_C 0x03
@@ -232,15 +211,6 @@ static int shell_main(int clear_screen) {
 				}
 				continue;
 			}
-			
-			if (c == CTRL_D) {
-				if (buffer_dim == 0) {
-					printf("\n^D\n");
-					return 0;
-				}
-				continue;
-			}
-			
 			appendCharacter(c);
 		}
 
@@ -392,17 +362,6 @@ static int sh_wrapper(int argc, char *argv[]) {
     (void)argv;
     clearPipe(0);
     return shell_main(0);
-}
-
-static void printPreviousCommand(enum REGISTERABLE_KEYS scancode) {
-	last_command_arrowed = SUB_MOD(last_command_arrowed, 1, HISTORY_SIZE);
-	if (command_history[last_command_arrowed][0] != 0) {
-		emptyScreenBuffer();
-		strcpy(buffer, command_history[last_command_arrowed]);
-		strcpy(command_history_buffer, command_history[last_command_arrowed]);
-		buffer_dim = strlen(command_history[last_command_arrowed]);
-		printf("%s", command_history[last_command_arrowed]);
-	}
 }
 
 static void deleteCharacter(void) {
