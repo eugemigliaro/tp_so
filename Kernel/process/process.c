@@ -339,6 +339,8 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->pid = pid;
     process->ppid = ppid;
     process->priority = priority;
+    process->priority_fixed = 0;
+    process->is_shell = 0;
     process->state = PROCESS_STATE_READY;
     process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     process->last_quantum_ticks = 0;
@@ -487,11 +489,12 @@ static void init_first_process_entry(int argc, char **argv) {
             process_t *shell =
                 createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
             if (shell != NULL) {
-                scheduler_add_ready(shell);
+                shell->is_shell = 1;
                 shell_created = 1;
                 if (pcb != NULL) {
                     pcb->main_shell_pid = (int32_t)shell->pid;
                 }
+                scheduler_add_ready(shell);
             }
         }
     }
@@ -513,6 +516,7 @@ static void init_first_process_entry(int argc, char **argv) {
                         process_t *new_shell =
                             createProcess(1, shell_argv, self->pid, SCHEDULER_MAX_PRIORITY, 1, SHELL_PROCESS_ENTRY);
                         if (new_shell != NULL) {
+                            new_shell->is_shell = 1;
                             scheduler_add_ready(new_shell);
                             pcb->main_shell_pid = (int32_t)new_shell->pid;
                         }

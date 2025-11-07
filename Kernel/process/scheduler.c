@@ -12,6 +12,8 @@ typedef struct scheduler_state {
     process_t *idle;
 } scheduler_state_t;
 
+#define SHELL_PRIORITY_THRESHOLD (SCHEDULER_MAX_PRIORITY + 1)
+
 static scheduler_state_t scheduler = {0};
 
 static void idle_process_entry(void) {
@@ -83,8 +85,11 @@ static void scheduler_age_ready(void) {
             if (process == NULL) {
                 break;
             }
-            if (process->state == PROCESS_STATE_READY && scheduler_should_age(process)) {
+            if (process->state == PROCESS_STATE_READY && scheduler_should_age(process) && !process->priority_fixed) {
                 process->priority--;
+                if (process->is_shell && process->priority < SCHEDULER_MAX_PRIORITY) {
+                    process->priority = SCHEDULER_MAX_PRIORITY;
+                }
                 process->ready_since_tick = scheduler.metrics.total_ticks;
                 queue_push(queue_for_priority(process->priority), process);
             } else {
@@ -114,8 +119,11 @@ void scheduler_add_ready(process_t *process) {
         return;
     }
     process->state = PROCESS_STATE_READY;
-    if (process != scheduler.idle) {
+    if (process != scheduler.idle && !process->priority_fixed) {
         process->priority = priority_from_usage(process->last_quantum_ticks);
+        if (process->is_shell && process->priority > SHELL_PRIORITY_THRESHOLD) {
+            process->priority = SHELL_PRIORITY_THRESHOLD;
+        }
     }
     process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     process->last_quantum_ticks = 0;
@@ -275,9 +283,16 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
         return -1;
     }
 
+    if (process->is_shell && priority > SHELL_PRIORITY_THRESHOLD) {
+        _sti();
+        return -1;
+    }
+
+    uint8_t target_priority = priority;
+
     uint8_t old_priority = process->priority;
 
-    if (process->state == PROCESS_STATE_READY && priority != old_priority) {
+    if (process->state == PROCESS_STATE_READY && target_priority != old_priority) {
         queue_t *source_queue = queue_for_priority(old_priority);
         _cli();
         queue_t *buffer_queue = queue_create();
@@ -299,10 +314,14 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
         queue_destroy(buffer_queue, NULL);
     }
 
-    process->priority = priority;
+    process->priority = target_priority;
+    if (process->is_shell && process->priority < SCHEDULER_MAX_PRIORITY) {
+        process->priority = SCHEDULER_MAX_PRIORITY;
+    }
+    process->priority_fixed = 1;
 
-    if (process->state == PROCESS_STATE_READY && priority != old_priority) {
-        queue_push(queue_for_priority(priority), process);
+    if (process->state == PROCESS_STATE_READY && process->priority != old_priority) {
+        queue_push(queue_for_priority(process->priority), process);
         _cli();
     }
 
