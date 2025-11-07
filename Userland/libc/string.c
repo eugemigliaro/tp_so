@@ -77,3 +77,22 @@ char * strtok(char * s1, const char * s2) {
 
     return s1;
 }
+
+char * strchr(const char *s, int c) {
+    if (s == NULL) {
+        return NULL;
+    }
+
+    while (*s != 0) {
+        if (*s == (char)c) {
+            return (char *)s;
+        }
+        s++;
+    }
+
+    if (c == 0) {
+        return (char *)s;
+    }
+
+    return NULL;
+}

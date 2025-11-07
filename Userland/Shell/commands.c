@@ -300,7 +300,6 @@ int filter(int argc, char *argv[]) {
                 putchar(' ');
             }
         }
-        putchar('\n');
     } else {
 		// Sin argumentos, lee de stdin hasta fin de entrada
 		int c;
@@ -310,6 +309,7 @@ int filter(int argc, char *argv[]) {
 			}
 		}
     }
+    putchar('\n');
     return 0;
 }
 

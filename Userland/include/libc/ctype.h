@@ -3,5 +3,6 @@
 
 #define tolower(a) ((a) >= 'A' && (a) <= 'Z' ? (a) + ('a' - 'A') : (a) )
 #define toupper(a) ((a) >= 'a' && (a) <= 'z' ? (a) - ('a' - 'A') : (a) )
+#define isspace(a) ((a) == ' ' || (a) == '\t' || (a) == '\n' || (a) == '\r' || (a) == '\v' || (a) == '\f')
 
 #endif
