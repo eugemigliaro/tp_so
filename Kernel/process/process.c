@@ -149,6 +149,11 @@ bool process_block(process_t *process) {
         return false;
     }
 
+    // Remove from ready queue if it's in READY state
+    if (process->state == PROCESS_STATE_READY) {
+        scheduler_remove_ready(process);
+    }
+
     process->state = PROCESS_STATE_BLOCKED;
 
     return true;

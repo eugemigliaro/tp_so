@@ -110,10 +110,13 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
         return (uint64_t)-1;
     }
 
+    uint64_t it = 0;
+
     while (1) {
         uint64_t alive = 0;
 
         for (uint64_t i = 0; i < max_processes; i++) {
+            printf("creando\n");
             int32_t pid = create_endless_loop();
             if (pid < 0) {
                 printf("test_processes: ERROR creating process\n");
@@ -132,8 +135,15 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
                 switch (action) {
                     case 0:
                         if (process_requests[i].state == PROCESS_TEST_RUNNING || process_requests[i].state == PROCESS_TEST_BLOCKED) {
+                            printf("killeando\n");
                             if (kill_process(process_requests[i].pid) == -1) {
                                 printf("test_processes: ERROR killing process\n");
+                                free(process_requests);
+                                return (uint64_t)-1;
+                            }
+                            // Wait for the killed process to be reaped
+                            if (processWaitPid((uint64_t)process_requests[i].pid) == -1) {
+                                printf("test_processes: ERROR waiting for killed process\n");
                                 free(process_requests);
                                 return (uint64_t)-1;
                             }
@@ -144,6 +154,8 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
 
                     case 1:
                         if (process_requests[i].state == PROCESS_TEST_RUNNING) {
+                            printf("bloqueando\n");
+
                             if (block_process(process_requests[i].pid) == -1) {
                                 printf("test_processes: ERROR blocking process\n");
                                 free(process_requests);
@@ -165,12 +177,15 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
                         free(process_requests);
                         return (uint64_t)-1;
                     }
+                    printf("desbloqueando\n");
                     process_requests[i].state = PROCESS_TEST_RUNNING;
                 }
             }
 
             processYield();
         }
+
+        printf("Iteracion : %d\n", it++);
 
         processYield();
     }
