@@ -43,7 +43,6 @@ typedef struct {
 // Built-in commands (POSIX built-ins or shell-specific)
 static int exit(int argc, char *argv[]);
 static int history(int argc, char *argv[]);
-static int sh_wrapper(int argc, char *argv[]);
 
 static void printPreviousCommand(enum REGISTERABLE_KEYS scancode);
 static void printNextCommand(enum REGISTERABLE_KEYS scancode);
@@ -137,10 +136,6 @@ Command commands[] = {
 	 .func = regs,
 	 .description = "Prints the register snapshot, if any",
 	 .isBuiltIn = 0},
-	{.name = "sh",
-	 .func = sh_wrapper,
-	 .description = "Creates a new shell process",
-	 .isBuiltIn = 0},
 	{.name = "time",
 	 .func = time,
 	 .description = "Prints the current time",
@@ -177,23 +172,63 @@ uint8_t command_history_last = 0;
 
 static uint64_t last_command_output = 0;
 
-static int shell_main(int clear_screen) {
-    if (clear_screen) {
-        clearScreen();
-    }
+static void printPreviousCommand(enum REGISTERABLE_KEYS scancode) {
+	last_command_arrowed = SUB_MOD(last_command_arrowed, 1, HISTORY_SIZE);
+	if (command_history[last_command_arrowed][0] != 0) {
+		emptyScreenBuffer();
+		strcpy(buffer, command_history[last_command_arrowed]);
+		strcpy(command_history_buffer, command_history[last_command_arrowed]);
+		buffer_dim = strlen(command_history[last_command_arrowed]);
+		printf("%s", command_history[last_command_arrowed]);
+	}
+}
 
-    buffer[0] = 0;
-    buffer_dim = 0;
-    command_history_buffer[0] = 0;
+static void printNextCommand(enum REGISTERABLE_KEYS scancode) {
+	last_command_arrowed = (last_command_arrowed + 1) % HISTORY_SIZE;
+	if (command_history[last_command_arrowed][0] != 0) {
+		emptyScreenBuffer();
+		strcpy(buffer, command_history[last_command_arrowed]);
+		strcpy(command_history_buffer, command_history[last_command_arrowed]);
+		buffer_dim = strlen(command_history[last_command_arrowed]);
+		printf("%s", command_history[last_command_arrowed]);
+	}
+}
 
-    registerKey(KP_UP_KEY, printPreviousCommand);
-    registerKey(KP_DOWN_KEY, printNextCommand);
+static void appendCharacter(char c) {
+	if (c == '\b' || c == 127) {
+		deleteCharacter();
+		return;
+	}
 
-    int32_t my_pid = processGetPid();
+	if (buffer_dim == 0 && prompt_dirty) {
+		putchar('\n');
+		printPrompt();
+	}
+
+	if (buffer_dim >= MAX_BUFFER_SIZE - 1) {
+		return;
+	}
+
+	buffer[buffer_dim] = c;
+	command_history_buffer[buffer_dim] = c;
+	buffer_dim++;
+	putchar(c);
+}
+
+
+int main(void) {
+  clearScreen();
+
+  buffer[0] = 0;
+  buffer_dim = 0;
+  command_history_buffer[0] = 0;
+
+	registerKey(KP_UP_KEY, printPreviousCommand);
+  registerKey(KP_DOWN_KEY, printNextCommand);
 
 	while (1) {
         handleBackgroundChildren();
-        printf("\e[0mshell(%d) \e[0;32m$\e[0m ", my_pid);
+        printPrompt();
 
         signed char c;
 
@@ -307,61 +342,6 @@ static int shell_main(int clear_screen) {
 
     __builtin_unreachable();
     return 0;
-}
-
-static void printPreviousCommand(enum REGISTERABLE_KEYS scancode) {
-	last_command_arrowed = SUB_MOD(last_command_arrowed, 1, HISTORY_SIZE);
-	if (command_history[last_command_arrowed][0] != 0) {
-		emptyScreenBuffer();
-		strcpy(buffer, command_history[last_command_arrowed]);
-		strcpy(command_history_buffer, command_history[last_command_arrowed]);
-		buffer_dim = strlen(command_history[last_command_arrowed]);
-		printf("%s", command_history[last_command_arrowed]);
-	}
-}
-
-static void printNextCommand(enum REGISTERABLE_KEYS scancode) {
-	last_command_arrowed = (last_command_arrowed + 1) % HISTORY_SIZE;
-	if (command_history[last_command_arrowed][0] != 0) {
-		emptyScreenBuffer();
-		strcpy(buffer, command_history[last_command_arrowed]);
-		strcpy(command_history_buffer, command_history[last_command_arrowed]);
-		buffer_dim = strlen(command_history[last_command_arrowed]);
-		printf("%s", command_history[last_command_arrowed]);
-	}
-}
-
-static void appendCharacter(char c) {
-	if (c == '\b' || c == 127) {
-		deleteCharacter();
-		return;
-	}
-
-	if (buffer_dim == 0 && prompt_dirty) {
-		putchar('\n');
-		printPrompt();
-	}
-
-	if (buffer_dim >= MAX_BUFFER_SIZE - 1) {
-		return;
-	}
-
-	buffer[buffer_dim] = c;
-	command_history_buffer[buffer_dim] = c;
-	buffer_dim++;
-	putchar(c);
-}
-
-
-int main(void) {
-    return shell_main(1);
-}
-
-static int sh_wrapper(int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
-    clearPipe(0);
-    return shell_main(0);
 }
 
 static void deleteCharacter(void) {
