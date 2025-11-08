@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define MAX_PIPES 100
-#define PIPE_BUFFER_SIZE (16 * 1024)
+#define PIPE_BUFFER_SIZE (1024)
 
 #define STDIN 0
 #define STDOUT 1
