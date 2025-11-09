@@ -216,11 +216,10 @@ bool process_exit(process_t *process) {
     uint8_t stdout_id = process->fd_targets[STDOUT];
     uint8_t stderr_id = process->fd_targets[STDERR];
     
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     
     if (process->state == PROCESS_STATE_READY) {
         scheduler_remove_ready(process);
-        _cli();
     }
     
     process->state = PROCESS_STATE_TERMINATED;
@@ -233,7 +232,7 @@ bool process_exit(process_t *process) {
     
     int should_force_switch = (pcb != NULL && pcb->running_pid == (int32_t)process->pid);
     
-    _sti();
+    interrupts_restore(flags);
 
     unattach_from_pipe(stdin_id, (int)process->pid);
     unattach_from_pipe(stdout_id, (int)process->pid);
@@ -254,10 +253,17 @@ bool process_exit(process_t *process) {
 
 void process_yield(void) {
     process_t *current = scheduler_current();
-    if (current != NULL) {
-        current->remaining_quantum = 0;
-        _force_scheduler_interrupt();
+    if (current == NULL) {
+        return;
     }
+
+    if (!scheduler_has_ready_other(current)) {
+        /* Nobody else runnable: keep current process going */
+        return;
+    }
+
+    current->remaining_quantum = 0;
+    _force_scheduler_interrupt();
 }
 
 int32_t get_pid(void) {
@@ -696,7 +702,7 @@ static void adopt_orphan_children(process_t *process) {
         return;
     }
 
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     
     process_t *init_process = NULL;
     if (pcb != NULL && pcb->init_pid >= 0) {
@@ -704,7 +710,7 @@ static void adopt_orphan_children(process_t *process) {
     }
     
     if (init_process == NULL) {
-        _sti();
+        interrupts_restore(flags);
         return;
     }
 
@@ -715,7 +721,7 @@ static void adopt_orphan_children(process_t *process) {
     }
     queue_destroy(process->children, NULL);
     process->children = NULL;
-    _sti();
+    interrupts_restore(flags);
 }
 
 int32_t process_wait_pid(uint32_t pid) { 
@@ -797,9 +803,9 @@ int give_foreground_to(uint32_t target_pid) {
         return -1;
     }
 
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     int32_t current_pid = pcb->running_pid;
-    _sti();
+    interrupts_restore(flags);
 
     if (current_pid == -1) {
         return -1;

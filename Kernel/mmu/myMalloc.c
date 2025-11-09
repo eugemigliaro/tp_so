@@ -18,16 +18,16 @@ static uint8_t heap[HEAP_SIZE];
 static Block *free_list = NULL;
 
 void mem_init() {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     free_list = (Block *) heap;
     free_list->size = HEAP_SIZE - BLOCK_SIZE;
     free_list->free = 1;
     free_list->next = NULL;
-    _sti();
+    interrupts_restore(flags);
 }
 
 void *mem_alloc(size_t size) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     Block *curr = free_list;
 
     while (curr) {
@@ -42,31 +42,32 @@ void *mem_alloc(size_t size) {
                 curr->size = size;
             }
             curr->free = 0;
-            _sti();
-            return (uint8_t *)curr + BLOCK_SIZE;
+            void *result = (uint8_t *)curr + BLOCK_SIZE;
+            interrupts_restore(flags);
+            return result;
         }
         curr = curr->next;
     }
-    _sti();
 
+    interrupts_restore(flags);
     return NULL;
 }
 
 
 void mem_free(void *ptr) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     if (!ptr) {
-        _sti();
+        interrupts_restore(flags);
         return;
     }
 
     Block *block = (Block *)((uint8_t *)ptr - BLOCK_SIZE);
     block->free = 1;
-    _sti();
+    interrupts_restore(flags);
 }
 
 void mem_status(size_t *total, size_t *used, size_t *available) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     *total = HEAP_SIZE;
     *used = 0;
     *available = 0;
@@ -80,7 +81,7 @@ void mem_status(size_t *total, size_t *used, size_t *available) {
         }
         curr = curr->next;
     }
-    _sti();
+    interrupts_restore(flags);
 }
 
 int32_t print_mem_status(void) {

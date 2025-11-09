@@ -4,6 +4,7 @@
 #include <queueADT.h>
 #include <interrupts.h>
 #include <memoryManager.h>
+#include <lib.h>
 
 typedef struct scheduler_state {
     process_t *current;
@@ -32,14 +33,14 @@ static size_t priority_index(uint8_t priority) {
 }
 
 static queue_t *queue_for_priority(uint8_t priority) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     size_t index = priority_index(priority);
     queue_t *queue = scheduler.ready_queues[index];
     if (queue == NULL) {
         queue = queue_create();
         scheduler.ready_queues[index] = queue;
     }
-    _sti();
+    interrupts_restore(flags);
     return queue;
 }
 
@@ -100,7 +101,7 @@ static void scheduler_age_ready(void) {
 }
 
 void scheduler_init(void) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
         queue_t *queue = queue_create();
         scheduler.ready_queues[i] = queue;
@@ -109,14 +110,33 @@ void scheduler_init(void) {
     char **argv_idle = mem_alloc(sizeof(char *));
     argv_idle[0] = "idle";
     scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, 0, idle_process_entry);
-    _sti();
+    interrupts_restore(flags);
+}
+
+static const char *debug_state_to_string(process_state_t state) {
+    switch (state) {
+        case PROCESS_STATE_READY:
+            return "ready";
+        case PROCESS_STATE_RUNNING:
+            return "running";
+        case PROCESS_STATE_BLOCKED:
+            return "blocked";
+        case PROCESS_STATE_TERMINATED:
+            return "terminated";
+        default:
+            return "unknown";
+    }
 }
 
 void scheduler_add_ready(process_t *process) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     if (process == NULL) {
-        _sti();
+        interrupts_restore(flags);
         return;
+    }
+    /* Ensure the process is not already enqueued (avoid duplicates) */
+    if (process->state == PROCESS_STATE_READY) {
+        scheduler_remove_ready(process);
     }
     process->state = PROCESS_STATE_READY;
     if (process != scheduler.idle && !process->priority_fixed) {
@@ -129,32 +149,31 @@ void scheduler_add_ready(process_t *process) {
     process->last_quantum_ticks = 0;
     process->ready_since_tick = scheduler.metrics.total_ticks;
     queue_push(queue_for_priority(process->priority), process);
-    _sti();
+    interrupts_restore(flags);
 }
 
 bool scheduler_remove_ready(process_t *process) {
-    _cli();
     if (process == NULL || process == scheduler.idle) {
-        _sti();
         return false;
     }
 
-    queue_t *queue = queue_for_priority(process->priority);
-    if (queue != NULL && queue_remove(queue, process)) {
-        _sti();
-        return true;
-    }
+    uint64_t flags = interrupts_save_and_disable();
+    bool removed = false;
 
     for (size_t i = 0; i < SCHEDULER_PRIORITY_LEVELS; i++) {
-        queue_t *other_queue = scheduler.ready_queues[i];
-        if (other_queue != NULL && other_queue != queue && queue_remove(other_queue, process)) {
-            _sti();
-            return true;
+        queue_t *queue = scheduler.ready_queues[i];
+        if (queue == NULL) {
+            continue;
+        }
+
+        /* Strip every occurrence so we do not leave stale duplicates behind */
+        while (queue_remove(queue, process)) {
+            removed = true;
         }
     }
-    _sti();
 
-    return false;
+    interrupts_restore(flags);
+    return removed;
 }
 
 process_t *scheduler_current(void) {
@@ -260,31 +279,53 @@ void scheduler_for_each_ready(scheduler_iter_cb callback, void *context) {
     }
 }
 
+bool scheduler_has_ready_other(process_t *exclude) {
+    bool found = false;
+    uint64_t flags = interrupts_save_and_disable();
+    for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY && !found; priority++) {
+        size_t index = priority_index(priority);
+        queue_t *queue = scheduler.ready_queues[index];
+        if (queue == NULL || queue_is_empty(queue)) {
+            continue;
+        }
+        queue_iterator_t it = queue_iter(queue);
+        while (queue_iter_has_next(&it)) {
+            process_t *candidate = queue_iter_next(&it);
+            if (candidate != NULL && candidate != exclude && candidate->state == PROCESS_STATE_READY) {
+                found = true;
+                break;
+            }
+        }
+    }
+    interrupts_restore(flags);
+    return found;
+}
+
 int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     if (priority < SCHEDULER_MAX_PRIORITY || priority > SCHEDULER_MIN_PRIORITY) {
-        _sti();
+        interrupts_restore(flags);
         return -1;
     }
 
     process_t *process = process_lookup(pid);
     if (process == NULL) {
-        _sti();
+        interrupts_restore(flags);
         return -1;
     }
 
     if (process->state == PROCESS_STATE_TERMINATED) {
-        _sti();
+        interrupts_restore(flags);
         return -1;
     }
 
     if (process == scheduler.idle) {
-        _sti();
+        interrupts_restore(flags);
         return -1;
     }
 
     if (process->is_shell && priority > SHELL_PRIORITY_THRESHOLD) {
-        _sti();
+        interrupts_restore(flags);
         return -1;
     }
 
@@ -294,10 +335,9 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
 
     if (process->state == PROCESS_STATE_READY && target_priority != old_priority) {
         queue_t *source_queue = queue_for_priority(old_priority);
-        _cli();
         queue_t *buffer_queue = queue_create();
         if (buffer_queue == NULL) {
-            _sti();
+            interrupts_restore(flags);
             return -1;
         }
 
@@ -322,13 +362,12 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
 
     if (process->state == PROCESS_STATE_READY && process->priority != old_priority) {
         queue_push(queue_for_priority(process->priority), process);
-        _cli();
     }
 
     if (process == scheduler.current) {
         process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
     }
-    _sti();
+    interrupts_restore(flags);
 
     return 0;
 }

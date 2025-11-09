@@ -110,7 +110,7 @@ uint16_t getWindowWidth() {
 }
 
 void scrollVideoMemoryUp(uint16_t scroll, uint32_t fillColor) {
-	_cli();
+	uint64_t flags = interrupts_save_and_disable();
 
 	uint8_t * framebuffer = (uint8_t * )(unsigned long long)(VBE_mode_info->framebuffer);
 	uint16_t width = getWindowWidth();
@@ -144,5 +144,5 @@ void scrollVideoMemoryUp(uint16_t scroll, uint32_t fillColor) {
 		}
 	}
 
-	_sti();
+	interrupts_restore(flags);
 }
