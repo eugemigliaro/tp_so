@@ -147,15 +147,22 @@ Todos los tests pueden ejecutarse en foreground o background (añadiendo `&`).
   tprio 1000000
   ```
 
-#### `tsem <num_processes> <num_operations>`
-- **Descripción**: Test de sincronización con semáforos
-- **Funcionamiento**: Crea procesos que incrementan y decrementan una variable compartida usando semáforos. El resultado final debe ser 0
-- **Parámetros**: 
-  - Número de procesos
-  - Número de incrementos/decrementos por proceso
+#### `tsync <iterations>`
+- **Descripción**: Test de sincronización con semáforo
+- **Funcionamiento**: Crea 2 pares de procesos (4 en total) que incrementan y decrementan una variable compartida protegida por un semáforo. El resultado final debe ser siempre 0
+- **Parámetro**: Número de iteraciones por proceso
 - **Ejemplo**: 
   ```bash
-  tsem 5 1000
+  tsync 10000
+  ```
+
+#### `tnosync <iterations>`
+- **Descripción**: Test sin sincronización (demuestra race conditions)
+- **Funcionamiento**: Crea 2 pares de procesos (4 en total) que incrementan y decrementan una variable compartida SIN protección de semáforo. El resultado final varía en cada ejecución debido a condiciones de carrera
+- **Parámetro**: Número de iteraciones por proceso
+- **Ejemplo**: 
+  ```bash
+  tnosync 10000
   ```
 
 ### Ejemplos de Uso
@@ -234,8 +241,15 @@ nice <pid_lector> 5
 
 #### Tests de Sincronización
 ```bash
-# Test con semáforos (resultado debe ser 0)
-tsem 5 10000
+# Test con semáforo (resultado siempre 0)
+tsync 10000
+
+# Test sin semáforo (resultado variable, muestra race conditions)
+tnosync 10000
+
+# Comparar ambos para ver la diferencia
+tsync 50000
+tnosync 50000
 
 # Test de prioridades
 tprio 1000000
@@ -290,7 +304,7 @@ ps
 - [x] Soporte Ctrl+C y Ctrl+D
 - [x] help, mem, ps, loop, kill, nice, block
 - [x] cat, wc, filter, mvar
-- [x] Tests: tmm, tproc, tprio, tsem
+- [x] Tests: tmm, tproc, tprio, tsync, tnosync
 
 ---
 
