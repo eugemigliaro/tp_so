@@ -9,7 +9,7 @@
 
 #define PROCESS_FIRST_PID 1
 #define PROCESS_MAX_PROCESSES 32
-#define PROCESS_STACK_SIZE (4096 * 4)
+#define PROCESS_STACK_SIZE (4096 * 2)
 #define PROCESS_MAX_CHILDREN PROCESS_MAX_PROCESSES
 
 typedef enum process_state {

@@ -257,11 +257,6 @@ void process_yield(void) {
         return;
     }
 
-    if (!scheduler_has_ready_other(current)) {
-        /* Nobody else runnable: keep current process going */
-        return;
-    }
-
     current->remaining_quantum = 0;
     _force_scheduler_interrupt();
 }
@@ -464,10 +459,6 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
         return NULL;
     }
 
-    if (foreground) {
-        pcb->foreground_pid = (int32_t)process->pid;
-    }
-
     if (!process_register(process)) {
         if (stderr_attached) {
             unattach_from_pipe(stderr_target, (int)process->pid);
@@ -484,6 +475,10 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
 
     if (parent != NULL) {
         add_child(parent, process);
+    }
+
+    if (foreground && pcb != NULL) {
+        pcb->foreground_pid = (int32_t)process->pid;
     }
 
     return process;

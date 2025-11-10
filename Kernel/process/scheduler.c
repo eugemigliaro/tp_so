@@ -4,7 +4,6 @@
 #include <queueADT.h>
 #include <interrupts.h>
 #include <memoryManager.h>
-#include <lib.h>
 
 typedef struct scheduler_state {
     process_t *current;
@@ -111,21 +110,6 @@ void scheduler_init(void) {
     argv_idle[0] = "idle";
     scheduler.idle = createProcess(1, argv_idle, 0, SCHEDULER_MIN_PRIORITY, 0, idle_process_entry);
     interrupts_restore(flags);
-}
-
-static const char *debug_state_to_string(process_state_t state) {
-    switch (state) {
-        case PROCESS_STATE_READY:
-            return "ready";
-        case PROCESS_STATE_RUNNING:
-            return "running";
-        case PROCESS_STATE_BLOCKED:
-            return "blocked";
-        case PROCESS_STATE_TERMINATED:
-            return "terminated";
-        default:
-            return "unknown";
-    }
 }
 
 void scheduler_add_ready(process_t *process) {
@@ -277,28 +261,6 @@ void scheduler_for_each_ready(scheduler_iter_cb callback, void *context) {
             callback(process, context);
         }
     }
-}
-
-bool scheduler_has_ready_other(process_t *exclude) {
-    bool found = false;
-    uint64_t flags = interrupts_save_and_disable();
-    for (uint8_t priority = SCHEDULER_MAX_PRIORITY; priority <= SCHEDULER_MIN_PRIORITY && !found; priority++) {
-        size_t index = priority_index(priority);
-        queue_t *queue = scheduler.ready_queues[index];
-        if (queue == NULL || queue_is_empty(queue)) {
-            continue;
-        }
-        queue_iterator_t it = queue_iter(queue);
-        while (queue_iter_has_next(&it)) {
-            process_t *candidate = queue_iter_next(&it);
-            if (candidate != NULL && candidate != exclude && candidate->state == PROCESS_STATE_READY) {
-                found = true;
-                break;
-            }
-        }
-    }
-    interrupts_restore(flags);
-    return found;
 }
 
 int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {

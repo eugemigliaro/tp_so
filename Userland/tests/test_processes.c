@@ -99,10 +99,6 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
     }
 
     uint64_t max_processes = (uint64_t)parsed;
-    if (max_processes == 0) {
-        printf("test_processes: max_processes must be greater than zero\n");
-        return (uint64_t)-1;
-    }
 
     process_request_t *process_requests = malloc(sizeof(process_request_t) * max_processes);
     if (process_requests == NULL) {

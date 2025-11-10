@@ -4,7 +4,7 @@
 #include <interrupts.h>
 #include <lib.h>
 
-#define HEAP_SIZE (1u << 19) 
+#define HEAP_SIZE (1u << 19)
 
 typedef struct Block {
     size_t size;
