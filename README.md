@@ -56,7 +56,7 @@ o explícitamente:
   - Ejemplo: `cat | wc`
   - Limitación: Solo soporta 2 comandos conectados
 - **`&` (background)**: Ejecuta un comando en segundo plano
-  - Ejemplo: `loop 5 &`
+  - Ejemplo: `loop 5 &` 
 
 #### Atajos de Teclado
 - **Ctrl + C**: Mata el proceso en foreground
@@ -135,7 +135,6 @@ Todos los tests pueden ejecutarse en foreground o background (añadiendo `&`).
 - **Ejemplo**: 
   ```bash
   tproc 10
-  tproc 5 &
   ```
 
 #### `tprio <max_value>`
