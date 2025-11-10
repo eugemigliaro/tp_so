@@ -162,6 +162,16 @@ int testsemaphore(int argc, char *argv[]) {
     return (int)test_semaphore((uint64_t)argc, argv);
 }
 
+int testsync(int argc, char *argv[]) {
+    adjust_test_args(&argc, &argv);
+    return (int)test_sync((uint64_t)argc, argv);
+}
+
+int tnosync(int argc, char *argv[]) {
+    adjust_test_args(&argc, &argv);
+    return (int)test_nosync((uint64_t)argc, argv);
+}
+
 // ========== NEW COMMANDS for TP2 ==========
 
 int mem(int argc, char *argv[]) {
