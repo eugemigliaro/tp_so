@@ -14,7 +14,6 @@ int invop(int argc, char *argv[]);
 int testmm(int argc, char *argv[]);
 int testprocesses(int argc, char *argv[]);
 int testpriority(int argc, char *argv[]);
-int testsemaphore(int argc, char *argv[]);
 int testsync(int argc, char *argv[]);
 int tnosync(int argc, char *argv[]);
 

@@ -107,10 +107,11 @@ o explícitamente:
   - Implementa sincronización estilo MVar (Haskell)
   - Ejemplo: `mvar 2 3`
   - Crea N procesos escritores y M procesos lectores que acceden a una variable compartida
-  - Cada escritor escribe un carácter único (A, B, C, etc.)
-  - Cada lector consume e imprime el valor junto con su identificador (1, 2, 3, etc.)
-  - El comando termina inmediatamente, dejando el coordinador en background
-  - Para detener: `kill <pid_coordinador>` (el PID se muestra al ejecutar)
+  - Cada escritor escribe un carácter único (A, B, C, etc.) en ciclos con espera activa aleatoria
+  - Cada lector consume e imprime el valor junto con su identificador (formato: `[Reader X] Read value: Y`)
+  - Máximo: 10 escritores y 10 lectores
+  - El comando retorna inmediatamente, dejando los procesos en background
+  - Para detener: usar `kill <pid>` con cada PID de escritor/lector (ver con `ps`)
 
 ### Tests Provistos por la Cátedra
 
@@ -130,7 +131,7 @@ Todos los tests pueden ejecutarse en foreground o background (añadiendo `&`).
 #### `tproc <max_processes>`
 - **Descripción**: Test de ciclo de vida de procesos
 - **Funcionamiento**: Crea, bloquea, desbloquea y mata procesos dummy aleatoriamente
-- **Parámetro**: Cantidad máxima de procesos a crear
+- **Parámetro**: Cantidad máxima de procesos a crear (máximo recomendado: 26 por limitaciones de memoria)
 - **Ejemplo**: 
   ```bash
   tproc 10
@@ -218,14 +219,17 @@ mvar 3 2
 # 2 escritores, 3 lectores - más lecturas
 mvar 2 3
 
-# Ejecutar en background y manipular
-mvar 2 2 &
-# Obtener PID con ps
+# Ejecutar y ver procesos creados
+mvar 2 2
 ps
-# Matar un escritor para observar comportamiento
-kill <pid_escritor>
-# Cambiar prioridad de un escritor
-nice <pid_escritor> 10
+# Verás: mvar_writer_A, mvar_writer_B, mvar_reader_1, mvar_reader_2
+
+# Matar escritores o lectores específicos
+kill <pid_escritor_A>
+ps  # Verificar que solo sigue el otro escritor
+
+# Cambiar prioridad de un lector
+nice <pid_lector> 5
 ```
 
 #### Tests de Sincronización

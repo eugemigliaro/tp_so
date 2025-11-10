@@ -149,11 +149,6 @@ int testpriority(int argc, char *argv[]) {
     return (int)test_prio((uint64_t)argc, argv);
 }
 
-int testsemaphore(int argc, char *argv[]) {
-    adjust_test_args(&argc, &argv);
-    return (int)test_semaphore((uint64_t)argc, argv);
-}
-
 int testsync(int argc, char *argv[]) {
     adjust_test_args(&argc, &argv);
     return (int)test_sync((uint64_t)argc, argv);
