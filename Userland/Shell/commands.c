@@ -347,8 +347,42 @@ int filter(int argc, char *argv[]) {
 }
 
 char mvar_var[1] = {0};
-void *mvar_empty_signal = NULL;
-void *mvar_full_signal = NULL;
+static uint32_t mvar_run_counter = 0;
+
+static void mvar_build_name(char *dest, uint32_t dest_len, const char *prefix, uint32_t run_id) {
+    if (dest == NULL || dest_len == 0) {
+        return;
+    }
+
+    int prefix_len = strlen(prefix);
+    if (prefix_len >= (int)dest_len) {
+        prefix_len = (int)dest_len - 1;
+    }
+
+    for (int i = 0; i < prefix_len; i++) {
+        dest[i] = prefix[i];
+    }
+    int pos = prefix_len;
+
+    if (pos >= dest_len - 1) {
+        dest[dest_len - 1] = '\0';
+        return;
+    }
+
+    char digits[10];
+    int digit_count = 0;
+    uint32_t value = run_id;
+    do {
+        digits[digit_count++] = (char)('0' + (value % 10));
+        value /= 10;
+    } while (value != 0 && digit_count < (int)(sizeof(digits)));
+
+    while (digit_count > 0 && pos < (int)dest_len - 1) {
+        dest[pos++] = digits[--digit_count];
+    }
+
+    dest[pos] = '\0';
+}
 
 const char *const writer_ids[MVAR_MAX_WRITERS] = {
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J"
@@ -361,15 +395,22 @@ const char *const reader_ids[MVAR_MAX_READERS] = {
 static void mvar_writer(int argc, char **argv) {
     (void)argc;
     char *id = argv[1];
+    const char *empty_name = argv[2];
+    const char *full_name = argv[3];
+    void *empty_sem = semOpen(empty_name, 0, 0);
+    void *full_sem = semOpen(full_name, 0, 0);
+    if (empty_sem == NULL || full_sem == NULL) {
+        processExit(-1);
+    }
 
     while(1) {
         uint32_t active_wait = (rand() % 999999) + 99999999;
         while(active_wait > 0) {
             active_wait--;
         }
-        semWait(mvar_empty_signal);
+        semWait(empty_sem);
         mvar_var[0] = id[0];
-        semPost(mvar_full_signal);
+        semPost(full_sem);
     }
 
     return;
@@ -378,6 +419,13 @@ static void mvar_writer(int argc, char **argv) {
 static void mvar_reader(int argc, char **argv) {
     (void)argc;
     char *id = argv[1];
+    const char *empty_name = argv[2];
+    const char *full_name = argv[3];
+    void *empty_sem = semOpen(empty_name, 0, 0);
+    void *full_sem = semOpen(full_name, 0, 0);
+    if (empty_sem == NULL || full_sem == NULL) {
+        processExit(-1);
+    }
 
     while (1) {
         uint32_t active_wait = (rand() % 999999) + 99999999;
@@ -385,12 +433,12 @@ static void mvar_reader(int argc, char **argv) {
             active_wait--;
         }
         
-        semWait(mvar_full_signal);
+        semWait(full_sem);
         char value = mvar_var[0];
         
         char id_char = id[0];
         printf("[Reader %c] Read value: %c\n", id_char, value);
-        semPost(mvar_empty_signal);
+        semPost(empty_sem);
     }
 
     return;
@@ -410,8 +458,18 @@ int mvar(int argc, char *argv[]){
         return 1;
     }
 
-    mvar_empty_signal = semOpen("mvar_empty", 1, 1);
-    mvar_full_signal = semOpen("mvar_full", 0, 1);
+    char empty_name[32];
+    char full_name[32];
+    uint32_t run_id = mvar_run_counter++;
+    mvar_build_name(empty_name, sizeof(empty_name), "mvar_empty_", run_id);
+    mvar_build_name(full_name, sizeof(full_name), "mvar_full_", run_id);
+
+    void *empty_sem = semOpen(empty_name, 1, 1);
+    void *full_sem = semOpen(full_name, 0, 1);
+    if (empty_sem == NULL || full_sem == NULL) {
+        printf("Error: could not create mvar semaphores\n");
+        return 1;
+    }
 
     if (writers > MVAR_MAX_WRITERS || readers > MVAR_MAX_READERS) {
         printf("Error: Too many readers or writers, maximum is 10 for both\n");
@@ -426,8 +484,8 @@ int mvar(int argc, char *argv[]){
         strcpy(name, "mvar_writer_");
         name[12] = writer_ids[i][0];
         name[13] = '\0';
-        char *writer_argv[] = { name, (char *)writer_ids[i], NULL };
-        writer_pid = processCreate((void (*)(int, char **))mvar_writer, 2, writer_argv, 1, 0);
+        char *writer_argv[] = { name, (char *)writer_ids[i], empty_name, full_name, NULL };
+        writer_pid = processCreate((void (*)(int, char **))mvar_writer, 4, writer_argv, 1, 0);
         if (writer_pid < 0) {
             printf("Error creating writer %d\n", i);
         }
@@ -438,8 +496,8 @@ int mvar(int argc, char *argv[]){
         strcpy(name, "mvar_reader_");
         name[12] = reader_ids[i][0];
         name[13] = '\0';
-        char *reader_argv[] = { name, (char *)reader_ids[i], NULL };
-        reader_pid = processCreate((void (*)(int, char **))mvar_reader, 2, reader_argv, 1, 0);
+        char *reader_argv[] = { name, (char *)reader_ids[i], empty_name, full_name, NULL };
+        reader_pid = processCreate((void (*)(int, char **))mvar_reader, 4, reader_argv, 1, 0);
         if (reader_pid < 0) {
             printf("Error creating reader %d\n", i);
         }
