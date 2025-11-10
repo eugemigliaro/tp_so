@@ -339,8 +339,10 @@ int filter(int argc, char *argv[]) {
 				putchar(c);
 			}
 		}
+        if (c == PIPE_END_OF_INPUT) {
+            putchar('\n');
+        }
     }
-    putchar('\n');
     return 0;
 }
 
