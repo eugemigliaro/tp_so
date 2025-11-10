@@ -85,7 +85,8 @@ static void scheduler_age_ready(void) {
             if (process == NULL) {
                 break;
             }
-            if (process->state == PROCESS_STATE_READY && scheduler_should_age(process) && !process->priority_fixed) {
+
+            if (process->state == PROCESS_STATE_READY && scheduler_should_age(process)) {
                 process->priority--;
                 if (process->is_shell && process->priority < SCHEDULER_MAX_PRIORITY) {
                     process->priority = SCHEDULER_MAX_PRIORITY;
@@ -123,10 +124,14 @@ void scheduler_add_ready(process_t *process) {
         scheduler_remove_ready(process);
     }
     process->state = PROCESS_STATE_READY;
-    if (process != scheduler.idle && !process->priority_fixed) {
-        process->priority = priority_from_usage(process->last_quantum_ticks);
-        if (process->is_shell && process->priority > SHELL_PRIORITY_THRESHOLD) {
-            process->priority = SHELL_PRIORITY_THRESHOLD;
+    if (process != scheduler.idle) {
+        if (process->priority_fixed) {
+            process->priority = process->priority_requested;
+        } else {
+            process->priority = priority_from_usage(process->last_quantum_ticks);
+            if (process->is_shell && process->priority > SHELL_PRIORITY_THRESHOLD) {
+                process->priority = SHELL_PRIORITY_THRESHOLD;
+            }
         }
     }
     process->remaining_quantum = SCHEDULER_DEFAULT_QUANTUM;
@@ -320,6 +325,7 @@ int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority) {
     if (process->is_shell && process->priority < SCHEDULER_MAX_PRIORITY) {
         process->priority = SCHEDULER_MAX_PRIORITY;
     }
+    process->priority_requested = process->priority;
     process->priority_fixed = 1;
 
     if (process->state == PROCESS_STATE_READY && process->priority != old_priority) {
