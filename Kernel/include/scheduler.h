@@ -27,5 +27,6 @@ const scheduler_metrics_t *scheduler_get_metrics(void);
 
 void scheduler_for_each_ready(scheduler_iter_cb callback, void *context);
 int32_t scheduler_set_process_priority(uint32_t pid, uint8_t priority);
+bool scheduler_has_ready_other(process_t *exclude);
 
 #endif

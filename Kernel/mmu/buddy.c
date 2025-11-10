@@ -152,57 +152,57 @@ static size_t free_bytes(const BuddyNode *node) {
 }
 
 void mem_init(void) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     root = build_tree(0, HEAP_ORDER_MAX, heap);
-    _sti();
+    interrupts_restore(flags);
 }
 
 void *mem_alloc(size_t size) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
+    void *result = NULL;
+
     if (root == NULL) {
         mem_init();
     }
 
     if (size == 0 || size > HEAP_SIZE) {
-        _sti();
-        return NULL;
+        goto out;
     }
 
     if (size > HEAP_SIZE - sizeof(AllocationHeader)) {
-        _sti();
-        return NULL;
+        goto out;
     }
 
     size_t total = size + sizeof(AllocationHeader);
     int order = required_order(total);
 
     if (order > HEAP_ORDER_MAX) {
-        _sti();
-        return NULL;
+        goto out;
     }
 
     BuddyNode *node = acquire_node(root, order);
     if (node == NULL) {
-        _sti();
-        return NULL;
+        goto out;
     }
 
     AllocationHeader *header = (AllocationHeader *)node->base;
     header->node = node;
-    _sti();
+    result = node->base + sizeof(AllocationHeader);
 
-    return node->base + sizeof(AllocationHeader);
+out:
+    interrupts_restore(flags);
+    return result;
 }
 
 void mem_free(void *ptr) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     if (ptr == NULL) {
-        _sti();
+        interrupts_restore(flags);
         return;
     }
 
     if (root == NULL) {
-        _sti();
+        interrupts_restore(flags);
         return;
     }
 
@@ -210,18 +210,18 @@ void mem_free(void *ptr) {
     BuddyNode *node = header->node;
 
     if (node == NULL || node->state != NODE_USED) {
-        
+        interrupts_restore(flags);
         return;
     }
 
     header->node = NULL;
     node->state = NODE_FREE;
     coalesce_up(node->parent);
-    _sti();
+    interrupts_restore(flags);
 }
 
 void mem_status(size_t *total, size_t *used, size_t *available) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     if (root == NULL) {
         mem_init();
     }
@@ -239,7 +239,7 @@ void mem_status(size_t *total, size_t *used, size_t *available) {
     if (used != NULL) {
         *used = HEAP_SIZE - free_total;
     }
-    _sti();
+    interrupts_restore(flags);
 }
 
 int32_t print_mem_status(void) {

@@ -10,9 +10,9 @@ static int is_valid_fd(int32_t fd) {
 }
 
 int set_fd_targets(uint8_t read_target, uint8_t write_target, uint8_t error_target) {
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     process_t *current = scheduler_current();
-    _sti();
+    interrupts_restore(flags);
 
     if (current == NULL) {
         return -1;
@@ -97,9 +97,9 @@ int setErrorTarget(uint8_t fd_targets[3], uint8_t target) {
 
 int read(int32_t fd, uint8_t *user_buffer, int32_t count) {
 
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     process_t *current = scheduler_current();
-    _sti();
+    interrupts_restore(flags);
 
     if (current == NULL) {
         return -1;
@@ -130,9 +130,9 @@ int write(int32_t fd, const uint8_t *user_buffer, int32_t count) {
         return 0;
     }
 
-    _cli();
+    uint64_t flags = interrupts_save_and_disable();
     process_t *current = scheduler_current();
-    _sti();
+    interrupts_restore(flags);
 
     if (current == NULL) {
         return -1;

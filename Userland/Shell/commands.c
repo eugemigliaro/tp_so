@@ -136,6 +136,19 @@ int testmm(int argc, char *argv[]) {
 
 int testprocesses(int argc, char *argv[]) {
     adjust_test_args(&argc, &argv);
+
+    if (argc == 1 && argv != NULL && argv[0] != NULL) {
+        int requested = atoi(argv[0]);
+        if (requested <= 0) {
+            printf("test_processes: max_processes must be greater than zero\n");
+            return -1;
+        }
+        if (requested > 26) {
+            printf("test_processes: max_processes cannot exceed 26\n");
+            return -1;
+        }
+    }
+
     return (int)test_processes((uint64_t)argc, argv);
 }
 

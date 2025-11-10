@@ -99,16 +99,14 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
     }
 
     uint64_t max_processes = (uint64_t)parsed;
-    if (max_processes == 0) {
-        printf("test_processes: max_processes must be greater than zero\n");
-        return (uint64_t)-1;
-    }
 
     process_request_t *process_requests = malloc(sizeof(process_request_t) * max_processes);
     if (process_requests == NULL) {
         printf("test_processes: ERROR allocating tracking array\n");
         return (uint64_t)-1;
     }
+
+    uint64_t it = 0;
 
     while (1) {
         uint64_t alive = 0;
@@ -134,6 +132,12 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
                         if (process_requests[i].state == PROCESS_TEST_RUNNING || process_requests[i].state == PROCESS_TEST_BLOCKED) {
                             if (kill_process(process_requests[i].pid) == -1) {
                                 printf("test_processes: ERROR killing process\n");
+                                free(process_requests);
+                                return (uint64_t)-1;
+                            }
+                            // Wait for the killed process to be reaped
+                            if (processWaitPid((uint64_t)process_requests[i].pid) == -1) {
+                                printf("test_processes: ERROR waiting for killed process\n");
                                 free(process_requests);
                                 return (uint64_t)-1;
                             }
@@ -171,6 +175,8 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
 
             processYield();
         }
+
+        printf("Iteracion : %d\n", it++);
 
         processYield();
     }
