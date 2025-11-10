@@ -185,7 +185,6 @@ void *schedule_tick(void *current_rsp) {
     if (running != NULL) {
         running->context.rsp = (uint64_t)current_rsp;
         if (running == scheduler.idle) {
-            // allow the idle task to yield every tick but still prefer real work
             running->state = PROCESS_STATE_READY;
         } else {
             if(running->state != PROCESS_STATE_RUNNING) {

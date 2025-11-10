@@ -22,12 +22,10 @@ _invalidopcode:
     push rbp
     mov rbp, rsp
 
-    ; this instruction triggers the exception
-    ud2  ;https://shorturl.at/Plmjv
+    ud2
 
     mov rsp, rbp
     pop rbp
     ret
-
 
 

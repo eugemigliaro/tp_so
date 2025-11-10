@@ -1,29 +1,6 @@
-/**
- * Note: Certain functions within this file are HOT PATHS.
- * They have been optimized as best as possible.
- * 
- * This file is excluded from the main compilation rules, and is always compiled with -O3 (regardless of the main compilation rules).
- */
-
 #include <fonts.h>
 #include <video.h>
 #include <lib.h>
-
-/* 
-    Note: An attempt was made to use the Linux kernel's Solarize.12x29.psf (https://wiki.osdev.org/PC_Screen_Font). Now only the pain remains.
-    The Makefile recipe is left here in case an(other) insane attempt at porting it is made. 
-
-    For the time being a simpler bitmapped font embedded into a header file is used.
-    Note: Symbol table entries on Solarize are: 
-    - _binary___font_assets_Solarize_12x29_psf_start
-    - _binary___font_assets_Solarize_12x29_psf_end
-    - _binary___font_assets_Solarize_12x29_psf_size
-
-    NOT the same as the ones listed on https://wiki.osdev.org/PC_Screen_Font
-
-    font.o:
-        objcopy -O elf64-x86-64 -B i386 -I binary ./font_assets/Solarize.12x29.psf font.o
- */
 
 #include "include/font_basic_8x8.h"
 
@@ -82,24 +59,19 @@ void clearPreviousCharacter(void);
 static void printBase(uint64_t value, uint32_t base);
 static inline int64_t strlen(const char * str);
 
-// * Uses inline to avoid stack frames on hot paths *
 static inline void renderFromBitmap(char * bitmap, uint64_t xBase, uint64_t yBase) {
     int xs, xo;
     for (int x = 0; x < glyphSizeX * fontSize; x++) {
         xs = xBase + x;
         xo = x / fontSize;
         for (int y = 0; y < glyphSizeY * fontSize; y++) {
-            // Read into char * slice and mask
             putPixel(*(bitmap + (y / fontSize)) & (1 << xo) ? text_color : background_color, xs, yBase + y);
         }
     }
 }
 
-// * Uses inline to avoid stack frames on hot paths *
-// `x` and `y` are the TOP LEFT corner positions
 static inline void renderAscii(char ascii, uint64_t x, uint64_t y) {
     if (ascii < 128) {
-        // The function only takes in a slice of the whole matrix
         renderFromBitmap(bitmap + (ascii * glyphSizeY), x, y);
     }
 }
@@ -111,7 +83,6 @@ static void scrollBufferPositionIfNeeded(void) {
     }
 }
 
-// `ascii` ASCII character to print (0-127)
 void putChar(char ascii) {
     dirty_line = 1;
     switch (ascii){
@@ -169,12 +140,10 @@ int32_t printToFd(int32_t fd, const char * string, int32_t count) {
     return i;
 }
 
-// Prints `string` Null terminated string to `STDOUT`
 void print(const char * string) {
     printToFd(FD_STDOUT, string, strlen(string));
 }
 
-// Jumps to the next line, does not print an empty line
 void newLine(void) {
     dirty_line = 0;
     yBufferPosition += maxGlyphSizeYOnLine;

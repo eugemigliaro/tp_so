@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stdint.h>
 
-// Enum of registerable keys.
-// Note: Does not include TAB or RETURN
 enum REGISTERABLE_KEYS {
     ESCAPE_KEY        = 0x01,
     KEY_1             = 0x02,

@@ -33,7 +33,7 @@ void exceptionDispatcher(int exception, uint64_t * registers) {
 		case INVALID_OPCODE_ID:
 			return invalid_opcode(registers, exception);
 		default:
-			return ; // returns to the asm exceptionHandler which will return to the shell
+			return ;
 	}
 }
 
@@ -96,7 +96,6 @@ void printExceptionData(uint64_t * registers, int errorCode) {
 	
 	_force_scheduler_interrupt();
 	
-	// Failsafe: should never reach here, but if we do, yield forever
 	while(1) {
 		process_yield();
 	}

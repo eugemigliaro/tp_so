@@ -97,7 +97,6 @@ typedef void (*SpecialKeyHandler)(enum KEYS scancode);
 
 uint8_t keyboardHandler();
 
-// All special keys *EXCEPT* for TAB and RETURN can be registered
 uint8_t registerSpecialKey(enum KEYS scancode, SpecialKeyHandler fn, uint8_t registeredFromKernel);
 void clearKeyFnMapNonKernel(SpecialKeyHandler * map);
 void restoreKeyFnMapNonKernel(SpecialKeyHandler * map);

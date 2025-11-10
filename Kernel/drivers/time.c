@@ -26,7 +26,6 @@ void timer_handler() {
 	ticks++;
 	toggleCursor();
 
-	// Check and wake up sleeping processes
 	if (sleeping_queue != NULL && !queue_is_empty(sleeping_queue)) {
 		queue_iterator_t iter = queue_iter(sleeping_queue);
 		

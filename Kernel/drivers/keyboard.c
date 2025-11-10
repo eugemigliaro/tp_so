@@ -12,14 +12,14 @@
 #define IS_KEYCODE(c) (c >= ESCAPE_KEY && c <= F12_KEY)
 #define IS_PRINTABLE(c) (\
     IS_KEYCODE((c)) && (\
-    ((c) >= 0x02 && (c) <= 0x0D) || /* 1,2,3,4,5,6,7,8,9,0,-,= */ \
-    ((c) >= 0x0F && (c) <= 0x1C) || /* TAB,q,w,e,r,t,y,u,i,o,p,[,],RET */ \
-    ((c) >= 0x1E && (c) <= 0x29) || /* a,s,d,f,g,h,j,k,l,;,',` */ \
-    ((c) >= 0x2B && (c) <= 0x35) || /* \,z,x,c,v,b,n,m,,,.,/ */ \
-    ((c) == 0x37) || /* * */ \
-    ((c) == 0x39) || /* space */ \
-    ((SHIFT_KEY_PRESSED) && (c) >= 0x47 && (c) <= 0x53) || /* home,up,pageup,-,left,5,right,+,end,down,pagedown,insert,delete */ \
-    ((c) == 0x4A || (c) == 0x4E) || /* -,+ */ \
+    ((c) >= 0x02 && (c) <= 0x0D) || \
+    ((c) >= 0x0F && (c) <= 0x1C) || \
+    ((c) >= 0x1E && (c) <= 0x29) || \
+    ((c) >= 0x2B && (c) <= 0x35) || \
+    ((c) == 0x37) || \
+    ((c) == 0x39) || \
+    ((SHIFT_KEY_PRESSED) && (c) >= 0x47 && (c) <= 0x53) || \
+    ((c) == 0x4A || (c) == 0x4E) || \
     ((c)) == 0x56 \
     ))
 
@@ -34,10 +34,6 @@ typedef struct {
 
 static RegisteredKeys KeyFnMap[ F12_KEY - ESCAPE_KEY + 1 ] = {0};
 
-// QEMU source https://github.com/qemu/qemu/blob/master/pc-bios/keymaps/en-us
-// http://flint.cs.yale.edu/feng/cos/resources/BIOS/Resources/assembly/makecodes.html
-// Array of scancodes to ASCII - Shift-Modified-ASCII
-// Note: this is NOT the complete QEMU scancode set, but it does include all printable characters and most control keys
 static const uint8_t scancodeMap[][2] = {
     /* 0x00 */ { 0, 0 },
     /* 0x01 */ { ESCAPE_KEY, ESCAPE_KEY },
@@ -95,9 +91,9 @@ static const uint8_t scancodeMap[][2] = {
     /* 0x35 */ { '/', '?' },
     /* 0x36 */ { SHIFT_KEY_R, SHIFT_KEY_R },
     /* 0x37 */ { '*', '*' },
-    /* 0x38 */ { ALT_KEY_L, META_L_KEY }, // Left Alt
+    /* 0x38 */ { ALT_KEY_L, META_L_KEY },
     /* 0x39 */ { ' ', ' ' },
-    /* 0x3A */ { CAPS_LOCK_KEY, CAPS_LOCK_KEY }, // Caps Lock
+    /* 0x3A */ { CAPS_LOCK_KEY, CAPS_LOCK_KEY },
     /* 0x3B */ { F1_KEY, F1_KEY },
     /* 0x3C */ { F2_KEY, F2_KEY },
     /* 0x3D */ { F3_KEY, F3_KEY },
@@ -123,8 +119,8 @@ static const uint8_t scancodeMap[][2] = {
     /* 0x51 */ { KP_PAGE_DOWN_KEY, '3' },
     /* 0x52 */ { KP_INSERT_KEY, '0' },
     /* 0x53 */ { KP_DELETE_KEY, '.' },
-    /* 0x54 */ { 0, 0 }, // 0x54
-    /* 0x55 */ { 0, 0 }, // 0x55
+    /* 0x54 */ { 0, 0 },
+    /* 0x55 */ { 0, 0 },
     /* 0x56 */ { '-', '-' },
     /* 0x57 */ { F11_KEY, F11_KEY },
     /* 0x58 */ { F12_KEY, F12_KEY },
@@ -165,19 +161,6 @@ static uint8_t isPressed(uint8_t scancode) {
     return !(isReleased(scancode));
 }
 
-// static uint8_t isShift(uint8_t scancode){
-//     uint8_t aux = scancode & 0x7F;
-//     return aux == SHIFT_KEY_L || aux == SHIFT_KEY_R;
-// }
-
-// static uint8_t isCapsLock(uint8_t scancode){
-//     return (scancode & 0x7F) == CAPS_LOCK_KEY;
-// }
-
-// static uint8_t isControl(uint8_t scancode){
-//     return (scancode & 0x7F) == CONTROL_KEY_L;
-// }
-
 static uint8_t makeCode(uint8_t scancode) {
     return scancode & 0x7F;
 }
@@ -204,7 +187,7 @@ uint8_t keyboardHandler(){
     }
     
     uint8_t make_code = makeCode(scancode);
-    if (! (is_pressed && IS_KEYCODE(scancode)) ) return scancode; // ignore break or unsupported scancodes
+    if (! (is_pressed && IS_KEYCODE(scancode)) ) return scancode;
 
     if (make_code == BACKSPACE_KEY) {
         uint8_t backspace = '\b';
@@ -257,7 +240,6 @@ uint8_t keyboardHandler(){
         write_pipe(STDIN, &pipe_char, 1);
     }
 
-    // Call the registered function for the key, if any
     if (KeyFnMap[scancode].fn != 0) {
         KeyFnMap[scancode].fn(scancode);
     }

@@ -70,10 +70,6 @@ static void setANSIProp(uint8_t prop) {
 }
 
 void parseANSI(const char * string, int * i) {
-    // \e[0;31mExample\e[0m"
-    // \e[0;31m -> Set text_color to red
-    // \e[0m -> Reset text_color
-
     if (string[(*i) + 1] != '[' || string[(*i) + 2] == 0) return;
 
     (*i) += 2;

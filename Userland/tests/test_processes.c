@@ -135,7 +135,6 @@ uint64_t test_processes(uint64_t argc, char *argv[]) {
                                 free(process_requests);
                                 return (uint64_t)-1;
                             }
-                            // Wait for the killed process to be reaped
                             if (processWaitPid((uint64_t)process_requests[i].pid) == -1) {
                                 printf("test_processes: ERROR waiting for killed process\n");
                                 free(process_requests);

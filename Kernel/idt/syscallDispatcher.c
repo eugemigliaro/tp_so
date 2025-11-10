@@ -19,20 +19,18 @@
 extern int64_t register_snapshot[18];
 extern int64_t register_snapshot_taken;
 
-// @todo Note: Technically.. registers on the stack are modifiable (since its a struct pointer, not struct). 
 int64_t syscallDispatcher(Registers * registers) {
 	switch(registers->rax){
 		case 3: return sys_read(registers->rdi, (signed char *) registers->rsi, registers->rdx);
-		// Note: Register parameters are 64-bit
 		case 4: return sys_write(registers->rdi, (char *) registers->rsi, registers->rdx);
 		
 		case 0x80000000: return sys_start_beep(registers->rdi);
 		case 0x80000001: return sys_stop_beep();
 		case 0x80000002: return sys_fonts_text_color(registers->rdi);
 		case 0x80000003: return sys_fonts_background_color(registers->rdi);
-		case 0x80000004: /* Reserved for sys_set_italics */
-		case 0x80000005: /* Reserved for sys_set_bold */
-		case 0x80000006: /* Reserved for sys_set_underline */
+		case 0x80000004:
+		case 0x80000005:
+		case 0x80000006:
 			return -1;
 		case 0x80000007: return sys_fonts_decrease_size();
 		case 0x80000008: return sys_fonts_increase_size();
@@ -97,10 +95,10 @@ int64_t syscallDispatcher(Registers * registers) {
 	}
 }
 
-// ==================================================================
 // Linux syscalls
 // ==================================================================
-
+// Linux system calls
+// ==================================================================
 int32_t sys_write(int32_t fd, char * __user_buf, int32_t count) {
     return write(fd, (const uint8_t *) __user_buf, count);
 }
@@ -112,7 +110,6 @@ int32_t sys_read(int32_t fd, signed char * __user_buf, int32_t count) {
 // ==================================================================
 // Custom system calls
 // ==================================================================
-
 int32_t sys_start_beep(uint32_t nFrequence) {
 	play_sound(nFrequence);
 	return 0;
@@ -166,7 +163,6 @@ uint16_t sys_window_height(void) {
 // ==================================================================
 // Date system calls
 // ==================================================================
-
 int32_t sys_hour(int * hour) {
 	*hour = getHour();
 	return 0;
@@ -185,8 +181,6 @@ int32_t sys_second(int * second) {
 // ==================================================================
 // Draw system calls
 // ==================================================================
-
-
 int32_t sys_circle(uint32_t hexColor, uint64_t topLeftX, uint64_t topLeftY, uint64_t diameter){
 	drawCircle(hexColor, topLeftX, topLeftY, diameter);
 	return 0;
@@ -202,6 +196,9 @@ int32_t sys_fill_video_memory(uint32_t hexColor) {
 	return 0;
 }
 
+// ==================================================================
+// Memory management system calls
+// ==================================================================
 void *sys_mem_alloc(uint64_t size) {
 	return mem_alloc((size_t) size);
 }
@@ -215,6 +212,9 @@ int32_t sys_mem_status_print(void) {
 	return print_mem_status();
 }
 
+// ==================================================================
+// Semaphore system calls
+// ==================================================================
 int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing) {
 	if (name == NULL) {
 		return -1;
@@ -273,18 +273,17 @@ int32_t sys_sem_set_value(sem_t *sem, uint32_t new_value) {
 }
 
 // ==================================================================
-// Custom exec system call
+// Exec system call
 // ==================================================================
-
 int32_t sys_exec(int32_t (*fnPtr)(void)) {
 	clear();
 
-	uint8_t fontSize = getFontSize(); 					// preserve font size
-	uint32_t text_color = getTextColor();				// preserve text color
-	uint32_t background_color = getBackgroundColor();	// preserve background color
+	uint8_t fontSize = getFontSize();
+	uint32_t text_color = getTextColor();
+	uint32_t background_color = getBackgroundColor();
 	
 	SpecialKeyHandler map[ F12_KEY - ESCAPE_KEY + 1 ] = {0};
-	clearKeyFnMapNonKernel(map); // avoid """processes/threads/apps""" registering keys across each other over time. reset the map every time
+	clearKeyFnMapNonKernel(map);
 	
 	int32_t aux = fnPtr();
 
@@ -298,9 +297,8 @@ int32_t sys_exec(int32_t (*fnPtr)(void)) {
 }
 
 // ==================================================================
-// Custom keyboard system calls
+// Keyboard system calls
 // ==================================================================
-
 int32_t sys_register_key(uint8_t scancode, SpecialKeyHandler fn){
 	registerSpecialKey(scancode, fn, 0);
 	return 0;
@@ -330,9 +328,8 @@ int32_t sys_get_register_snapshot(int64_t * registers) {
 }
 
 // ==================================================================
-// Context Switch system calls
+// Process management system calls
 // ==================================================================
-
 int32_t sys_process_get_pid(void) {
 	return get_pid();
 }
@@ -432,7 +429,6 @@ int32_t sys_process_get_foreground(void) {
 // ==================================================================
 // Pipes and FD target system calls
 // ==================================================================
-
 int32_t sys_open_pipe(void) {
     return open_pipe();
 }

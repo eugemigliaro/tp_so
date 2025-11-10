@@ -13,8 +13,6 @@
 #define PIPE_END_OF_INPUT 4
 #define PIPE_READ_ERROR (-1)
 
-// ========== Exception command wrappers ==========
-
 int divzero(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -28,8 +26,6 @@ int invop(int argc, char *argv[]) {
     _invalidopcode();
     return 0;
 }
-
-// ========== Existing commands (adapted to argc/argv pattern) ==========
 
 int clear(int argc, char *argv[]) {
     clearScreen();
@@ -77,7 +73,6 @@ int man(int argc, char *argv[]) {
         return 1;
     }
 
-    // Access commands array via extern (defined in shell.c)
     for (int i = 0; commands[i].name != NULL; i++) {
         if (strcasecmp(commands[i].name, argv[1]) == 0) {
             printf("Command: %s\nInformation: %s\n", commands[i].name, commands[i].description);
@@ -111,9 +106,6 @@ int regs(int argc, char *argv[]) {
 
     return 0;
 }
-
-// ========== TEST COMMANDS ==========
-// These are thin wrappers that call the actual test functions
 
 static inline void adjust_test_args(int *argc, char ***argv) {
     if (argc == NULL || argv == NULL) {
@@ -162,8 +154,6 @@ int testsemaphore(int argc, char *argv[]) {
     return (int)test_semaphore((uint64_t)argc, argv);
 }
 
-// ========== NEW COMMANDS for TP2 ==========
-
 int mem(int argc, char *argv[]) {
     if (argc > 1) {
         printf("Usage: mem\n");
@@ -183,7 +173,7 @@ int ps(int argc, char *argv[]) {
 }
 
 int loop(int argc, char *argv[]) {
-    uint32_t seconds = 1; // Default: 1 second
+    uint32_t seconds = 1;
     
     if (argc > 2) {
         printf("Usage: loop [seconds]\n");
@@ -203,7 +193,7 @@ int loop(int argc, char *argv[]) {
     
     while (1) {
         printf("Hello from PID: %d\n", pid);
-        sleep(seconds * 1000); // Convert to milliseconds
+        sleep(seconds * 1000);
     }
     
     return 0;
@@ -318,7 +308,6 @@ int wc(int argc, char *argv[]) {
 }
 
 int filter(int argc, char *argv[]) {
-    // Si hay argumentos
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             char *str = argv[i];
@@ -332,7 +321,6 @@ int filter(int argc, char *argv[]) {
             }
         }
     } else {
-		// Sin argumentos, lee de stdin hasta fin de entrada
 		int c;
 		while ((c = getchar()) != PIPE_END_OF_INPUT && c != PIPE_READ_ERROR) {
 			if (!IS_VOCAL(c)) {

@@ -10,7 +10,6 @@ static char buffer[64] = {0};
 
 static uint32_t uintToBase(uint64_t value, char * buffer, uint32_t base);
 static void printBase(int fd, int num, int base);
-// static void printFloat(int fd, float num);
 
 void puts(const char * str) {
     printf(str);
@@ -23,11 +22,11 @@ void vfprintf(int fd, const char * format, va_list args) {
         switch (format[i]) {
         case '\e':
         #ifdef ANSI_4_BIT_COLOR_SUPPORT
-            sys_write(fd, &format[i], 0); // "writes" (ignored because of count=0) \e char to account for fd changes
+            sys_write(fd, &format[i], 0);
             parseANSI(format, &i);
             break ;
         #else
-            while(format[i] != 'm') i++; // ignore ANSI escape codes, assumes valid \e[X,Ym format
+            while(format[i] != 'm') i++;
             i++;
             break ;
         #endif
@@ -38,7 +37,6 @@ void vfprintf(int fd, const char * format, va_list args) {
                 case 'd': printBase(fd, va_arg(args, int), 10); break ;
                 case 'o': printBase(fd, va_arg(args, int), 8); break ;
                 case 'b': printBase(fd, va_arg(args, int), 2); break ;
-                // case 'f': printFloat(fd, va_arg(args, double)); break ;
                 case 'c': {
                     char c = (char) va_arg(args, int);
                     sys_write(fd, &c, 1);
@@ -87,7 +85,7 @@ int vscanf(const char * format, va_list args) {
                         c = getchar();
 
                         if (c != '-' && (c < '0' || c > '9')) {
-                            while ((c = getchar()) != '\n'); // empty input buffer
+                            while ((c = getchar()) != '\n');
                             break ;
                         };
 
@@ -214,7 +212,6 @@ static uint32_t uintToBase(uint64_t value, char * buffer, uint32_t base)
 	char *p1, *p2;
 	uint32_t digits = 0;
 
-	//Calculate characters for each digit
 	do
 	{
 		uint32_t remainder = value % base;
@@ -223,10 +220,8 @@ static uint32_t uintToBase(uint64_t value, char * buffer, uint32_t base)
 	}
 	while (value /= base);
 
-	// Terminate string in buffer.
 	*p = 0;
 
-	//Reverse string in buffer.
 	p1 = buffer;
 	p2 = p - 1;
 	while (p1 < p2)

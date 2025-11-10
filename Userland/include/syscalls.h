@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <sys.h>
 
-// Linux syscall prototypes
+// Linux syscalls
 int32_t sys_write(int64_t fd, const void * buf, int64_t count);
 int32_t sys_read(int64_t fd, void * buf, int64_t count);
 
-// Custom syscall prototypes
+// Custom syscalls
 /* 0x80000000 */
 int32_t sys_start_beep(uint32_t nFrequence);
 /* 0x80000001 */
@@ -28,7 +28,7 @@ int32_t sys_clear_screen(void);
 /* 0x8000000B */
 int32_t sys_clear_screen_character(void);
 
-// Date syscall prototypes
+// Date syscalls
 /* 0x80000010 */
 int32_t sys_hour(int * hour);
 /* 0x80000011 */
@@ -36,6 +36,7 @@ int32_t sys_minute(int * minute);
 /* 0x80000012 */
 int32_t sys_second(int * second);
 
+// Draw syscalls
 int32_t sys_circle(int color, long long int topleftX, long long int topLefyY, long long int diameter);
 
 int32_t sys_rectangle(int color, long long int width_pixels, long long int height_pixels, long long int initial_pos_x, long long int initial_pos_y);
@@ -47,6 +48,7 @@ int32_t sys_mem_status_print(void);
 void *sys_mem_alloc(uint64_t size);
 int32_t sys_mem_free(void *ptr);
 
+// Semaphore syscalls
 int64_t sys_sem_open(const char *name, uint32_t initial_count, uint8_t create_if_missing);
 int32_t sys_sem_close(void *sem);
 int32_t sys_sem_wait(void *sem);
@@ -54,6 +56,7 @@ int32_t sys_sem_post(void *sem);
 /* 0x80000124 */
 int32_t sys_sem_set_value(void *sem, uint32_t new_value);
 
+// Process management syscalls
 int32_t sys_process_create(void (*entry_point)(int argc, char **argv), int argc, char **argv, uint8_t priority, uint8_t foreground);
 int32_t sys_process_exit(int32_t status);
 int32_t sys_process_get_pid(void);
@@ -68,19 +71,24 @@ int32_t sys_process_wait_children(void);
 int32_t sys_process_give_foreground(uint64_t pid);
 int32_t sys_process_get_foreground(void);
 
+// Exec syscall
 int32_t sys_exec(int32_t (*fnPtr)(void));
 
+// Keyboard syscall
 int32_t sys_register_key(uint8_t scancode, void (*fn)(enum REGISTERABLE_KEYS scancode));
 
+// Window/metrics syscalls
 int32_t sys_window_width(void);
 
 int32_t sys_window_height(void);
 
+// Sleep syscall
 int32_t sys_sleep_milis(uint32_t milis);
 
+// Snapshot syscall
 int32_t sys_get_register_snapshot(int64_t * registers);
 
-// Pipes and FD target syscalls
+// Pipe syscalls
 /* 0x80000130 */
 int32_t sys_open_pipe(void);
 /* 0x80000131 */

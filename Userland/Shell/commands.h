@@ -1,8 +1,6 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
-// External commands (not POSIX built-ins)
-
 int clear(int argc, char *argv[]);
 int help(int argc, char *argv[]);
 int time(int argc, char *argv[]);
@@ -10,12 +8,8 @@ int font(int argc, char *argv[]);
 int man(int argc, char *argv[]);
 int regs(int argc, char *argv[]);
 
-// Exception wrappers
 int divzero(int argc, char *argv[]);
 int invop(int argc, char *argv[]);
-
-// ========== TEST COMMANDS ==========
-// Thin wrappers around test functions from Userland/tests/
 
 int testmm(int argc, char *argv[]);
 int testprocesses(int argc, char *argv[]);
@@ -25,7 +19,6 @@ int testsemaphore(int argc, char *argv[]);
 #define MVAR_MAX_READERS 10
 #define MVAR_MAX_WRITERS 10
 
-// a implementar
 int mem(int argc, char *argv[]);
 int ps(int argc, char *argv[]);
 int loop(int argc, char *argv[]);
@@ -37,4 +30,4 @@ int wc(int argc, char *argv[]);
 int filter(int argc, char *argv[]);
 int mvar(int argc, char *argv[]);
 
-#endif // COMMANDS_H
+#endif

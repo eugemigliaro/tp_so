@@ -15,4 +15,4 @@ void mem_status(size_t *total, size_t *used, size_t *available);
 
 int32_t print_mem_status(void);
 
-#endif //TP_SO_MEMORYMANAGER_H
+#endif

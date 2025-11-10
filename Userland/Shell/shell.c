@@ -40,7 +40,6 @@ typedef struct {
 	uint8_t isBuiltIn;
 } ParsedCommand;
 
-// Built-in commands (POSIX built-ins or shell-specific)
 static int exit(int argc, char *argv[]);
 static int history(int argc, char *argv[]);
 
@@ -62,7 +61,6 @@ static uint8_t last_command_arrowed = 0;
 static int prompt_dirty = 0;
 static uint8_t shell_fd_targets[3] = {FD_STDIN, FD_STDOUT, FD_STDERR};
 
-/* All available commands. Sorted alphabetically by their name */
 Command commands[] = {
 	{.name = "block",
 	 .func = block,
@@ -590,8 +588,6 @@ static char *trimWhitespace(char *str) {
 	*end = '\0';
 	return str;
 }
-
-// BUILT-IN COMMANDS IMPLEMENTATION
 
 static int history(int argc, char *argv[]) {
     uint8_t last = command_history_last;

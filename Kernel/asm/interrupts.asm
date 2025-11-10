@@ -70,7 +70,7 @@ SECTION .text
 %macro irqHandlerMaster 1
 	pushState
 
-	mov rdi, %1 ; pass argument to irqDispatcher
+	mov rdi, %1
 	call irqDispatcher
 
 	; signal pic EOI (End of Interrupt)
@@ -100,7 +100,7 @@ SECTION .text
 	mov [exception_register_snapshot + 0x68], r14
 	mov [exception_register_snapshot + 0x70], r15
 
-	mov [exception_register_snapshot + 0x78], rsp ; rsp
+	mov [exception_register_snapshot + 0x78], rsp
 
 	; after the exception, the rip's value that points 
 	; to the faulting instruction is, among other things, pushed to the stack
@@ -114,18 +114,18 @@ SECTION .text
 	mov rax, [rsp + 0x10] ; RFLAGS
 	mov [exception_register_snapshot + 0x88], rax
 
-	mov rdi, %1 ; pass argument to exceptionDispatcher
-	mov rsi, exception_register_snapshot ;pass current register values to exceptionDispatcher
+	mov rdi, %1
+	mov rsi, exception_register_snapshot
 	
 	call exceptionDispatcher
 
-	call getStackBase ; reset the stack
+	call getStackBase
 	mov [rsp + 0x18], rax
 
-	mov QWORD [rsp], USERLAND ; set return address to userland
+	mov QWORD [rsp], USERLAND
 
 	sti
-	iretq ; will pop USERLAND and jmp to it
+	iretq
 %endmacro
 
 _hlt:
@@ -147,7 +147,7 @@ _force_scheduler_interrupt:
     ret
 
 picMasterMask:
-	push rbp     ; Stack frame
+	push rbp
 	mov rbp, rsp
 	mov rax, rdi
 
@@ -185,13 +185,13 @@ _irq00Handler:
     jmp .run_scheduler
 
 .regular_tick:
-    mov rdi, 0 ; pass argument to irqDispatcher
+	    mov rdi, 0
     call irqDispatcher
 
 .run_scheduler:
-    mov rdi, rsp              ; arg: current stack frame pointer
-    call schedule_tick        ; returns next stack in rax
-    mov rsp, rax              ; switch to chosen process stack
+	    mov rdi, rsp
+	    call schedule_tick
+	    mov rsp, rax
 
     mov al, 20h               ; PIC EOI
     out 20h, al
@@ -204,14 +204,14 @@ _irq01Handler:
 	pushfq
 	pushState
 
-	mov rdi, 1 ; pass argument to irqDispatcher
+		mov rdi, 1
 	call irqDispatcher
 
 	cmp rax, REGISTER_SNAPSHOT_KEY_SCANCODE ; F12 KEY SCANCODE
 	jne .skip
 
-	popState  ; restore register values
-	pushState ; preserve stack frame
+		popState
+		pushState
 
 	mov [register_snapshot + 0x08 * 0x00], rax
 	mov [register_snapshot + 0x08 * 0x01], rbx
@@ -240,7 +240,7 @@ _irq01Handler:
 	mov byte [register_snapshot_taken], 0x01
 
 	.skip:
-	; signal pic EOI (End of Interrupt)
+		; signal pic EOI (End of Interrupt)
 	mov al, 20h
 	out 20h, al
 
@@ -254,7 +254,7 @@ _irq01Handler:
 _irq80Handler:
 	pushState
 
-	mov rdi, rsp ; pass REGISTERS (stack) to irqDispatcher, see: `pushState` two lines above
+		mov rdi, rsp
 	call syscallDispatcher
 
 	mov rbx, rax
@@ -265,8 +265,8 @@ _irq80Handler:
 
 	mov rax, rbx
 
-	popStateButRAX
-	add rsp, 8 ; skip the error code pushed by irqDispatcher
+		popStateButRAX
+		add rsp, 8
 	iretq
 
 ; Zero Division Exception

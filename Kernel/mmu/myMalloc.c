@@ -32,7 +32,6 @@ void *mem_alloc(size_t size) {
 
     while (curr) {
         if (curr->free && curr->size >= size) {
-            // dividir bloque si sobra espacio
             if (curr->size > size + BLOCK_SIZE) {
                 Block *new_block = (Block *)((uint8_t *)curr + BLOCK_SIZE + size);
                 new_block->size = curr->size - size - BLOCK_SIZE;

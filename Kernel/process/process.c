@@ -13,9 +13,6 @@
 #define SHELL_PROCESS_NAME "shell"
 #define SHELL_PROCESS_ENTRY ((void *)0x400000)
 static void init_first_process_entry(int argc, char **argv);
-/*
-static size_t process_active_count(void);
-*/
 static int32_t reap_child_process(process_t *process);
 static int shell_created = 0;
 static void adopt_orphan_children(process_t *process);
@@ -85,7 +82,7 @@ bool process_register(process_t *process) {
     }
 
     if (pcb->processes[index] != NULL) {
-        return false; // PID already in use
+        return false;
     }
 
     pcb->processes[index] = process;
@@ -131,15 +128,6 @@ void process_set_running(process_t *process) {
     pcb->running_pid = (int32_t)process->pid;
 }
 
-/*
-static size_t process_active_count(void) {
-    if (pcb == NULL) {
-        return 0;
-    }
-    return pcb->process_count;
-}
-*/
-
 bool process_block(process_t *process) {
     if (process == NULL) {
         return false;
@@ -149,7 +137,6 @@ bool process_block(process_t *process) {
         return false;
     }
 
-    // Remove from ready queue if it's in READY state
     if (process->state == PROCESS_STATE_READY) {
         scheduler_remove_ready(process);
     }
@@ -289,7 +276,7 @@ static uint32_t allocate_pid(void) {
         }
     }
 
-    return 0; // No available PID
+    return 0;
 }
 
 static const char *process_state_to_string(process_state_t state) {
@@ -320,7 +307,6 @@ static void process_entry_wrapper(int argc, char **argv) {
     
     process_exit(current);
     
-    // Failsafe: should never reach here, but if we do, yield forever
     while(1) {
         process_yield();
     }
@@ -394,7 +380,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->argv[process->argc] = NULL;
 
     if (process->argc > 0) {
-        process->name = process->argv[0]; // Set process name to first argument 
+        process->name = process->argv[0];
     }
 
     void *stack_base = mem_alloc(PROCESS_STACK_SIZE);

@@ -20,7 +20,6 @@ uint64_t test_mm(uint64_t max_memory) {
     rq = 0;
     total = 0;
 
-    // Request as many blocks as we can
     while (rq < MAX_BLOCKS && total < max_memory) {
       mm_rqs[rq].size = GetUniform(max_memory - total - 1) + 1;
       mm_rqs[rq].address = mem_alloc(mm_rqs[rq].size);
@@ -31,13 +30,11 @@ uint64_t test_mm(uint64_t max_memory) {
       }
     }
 
-    // Set
     uint32_t i;
     for (i = 0; i < rq; i++)
       if (mm_rqs[i].address)
         memset(mm_rqs[i].address, i, mm_rqs[i].size);
 
-    // Check
     for (i = 0; i < rq; i++)
       if (mm_rqs[i].address)
         if (!memcheck(mm_rqs[i].address, i, mm_rqs[i].size)) {
@@ -45,7 +42,6 @@ uint64_t test_mm(uint64_t max_memory) {
           return -1;
         }
 
-    // Free
     for (i = 0; i < rq; i++)
       if (mm_rqs[i].address)
         mem_free(mm_rqs[i].address);

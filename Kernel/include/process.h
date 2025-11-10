@@ -20,7 +20,7 @@ typedef enum process_state {
 } process_state_t;
 
 typedef struct context{
-    uint64_t rsp; // I think it is enough to store only this, since the rest are in the stack
+    uint64_t rsp;
 } context_t;
 
 typedef struct process {
@@ -36,7 +36,7 @@ typedef struct process {
     uint8_t priority_requested;
     bool priority_fixed;
     bool is_shell;
-    context_t context; //should this be a pointer?
+    context_t context;
     uint8_t remaining_quantum;
     uint8_t last_quantum_ticks;
     uint64_t ready_since_tick;

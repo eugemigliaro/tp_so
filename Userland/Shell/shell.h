@@ -5,10 +5,9 @@ typedef struct {
     char *name;
     int (*func)(int argc, char *argv[]);
     char *description;
-    int isBuiltIn;  // 1 for built-in commands, 0 for external
+    int isBuiltIn;
 } Command;
 
-// Declare commands array as extern so commands.c can access it
 extern Command commands[];
 
-#endif // SHELL_INTERNAL_H
+#endif

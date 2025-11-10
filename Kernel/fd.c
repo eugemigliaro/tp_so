@@ -110,8 +110,7 @@ int read(int32_t fd, uint8_t *user_buffer, int32_t count) {
     }
 
     if (current->fd_targets[READ_FD] == STDIN && get_foreground_process_pid() != current->pid) {
-        return -1; //lo deberia matar?
-
+        return -1;
     }
 
     return read_pipe(current->fd_targets[fd], user_buffer, (uint64_t)count);
