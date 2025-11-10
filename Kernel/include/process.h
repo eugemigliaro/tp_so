@@ -33,6 +33,7 @@ typedef struct process {
     uint8_t fd_targets[3];
     process_state_t state;
     uint8_t priority;
+    uint8_t priority_requested;
     bool priority_fixed;
     bool is_shell;
     context_t context; //should this be a pointer?

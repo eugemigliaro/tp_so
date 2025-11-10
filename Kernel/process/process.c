@@ -345,6 +345,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->pid = pid;
     process->ppid = ppid;
     process->priority = priority;
+    process->priority_requested = priority;
     process->priority_fixed = 0;
     process->is_shell = 0;
     process->state = PROCESS_STATE_READY;
