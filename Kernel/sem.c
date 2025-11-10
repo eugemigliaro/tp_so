@@ -113,16 +113,24 @@ int sem_post(sem_t *sem){
 
     semLock(&sem->lock);
     
-    if(queue_is_empty(sem->waiting_processes)){
-        sem->count++;
-        ret = 0;
-    } else {
+    bool woke_process = false;
+    while (sem->waiting_processes != NULL && !queue_is_empty(sem->waiting_processes)) {
         process_t *process = (process_t *)queue_pop(sem->waiting_processes);
-        if (process != NULL) {
-            should_force_scheduler = process_unblock(process);
-            ret = 0;
+        if (process == NULL) {
+            break;
+        }
+        if (process_unblock(process)) {
+            should_force_scheduler = true;
+            woke_process = true;
+            break;
         }
     }
+
+    if (!woke_process) {
+        sem->count++;
+    }
+
+    ret = 0;
 
     semUnlock(&sem->lock);
 
