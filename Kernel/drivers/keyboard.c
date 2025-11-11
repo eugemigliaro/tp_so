@@ -34,7 +34,7 @@ typedef struct {
     SpecialKeyHandler fn;
 } RegisteredKeys;
 
-static RegisteredKeys KeyFnMap[ F12_KEY - ESCAPE_KEY + 1 ] = {0};
+static RegisteredKeys KeyFnMap[F12_KEY + 1] = {0};
 
 static const uint8_t scancodeMap[][2] = {
     /* 0x00 */ { 0, 0 },
@@ -129,7 +129,7 @@ static const uint8_t scancodeMap[][2] = {
 };
 
 void restoreKeyFnMapNonKernel(SpecialKeyHandler * map) {
-    for(uint8_t i = ESCAPE_KEY; i < F12_KEY; i++){
+    for (uint8_t i = ESCAPE_KEY; i <= F12_KEY; i++) {
         if (KeyFnMap[i].registered_from_kernel == 0) {
             KeyFnMap[i].fn = map[i];
         }
@@ -137,7 +137,7 @@ void restoreKeyFnMapNonKernel(SpecialKeyHandler * map) {
 }
 
 void clearKeyFnMapNonKernel(SpecialKeyHandler * map) {
-    for(uint8_t i = ESCAPE_KEY; i < F12_KEY; i++){
+    for (uint8_t i = ESCAPE_KEY; i <= F12_KEY; i++) {
         if (KeyFnMap[i].registered_from_kernel == 0) {
             map[i] = KeyFnMap[i].fn;
             KeyFnMap[i].fn = NULL;

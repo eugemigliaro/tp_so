@@ -284,7 +284,7 @@ int32_t sys_exec(int32_t (*fnPtr)(void)) {
 	uint32_t text_color = getTextColor();
 	uint32_t background_color = getBackgroundColor();
 	
-	SpecialKeyHandler map[ F12_KEY - ESCAPE_KEY + 1 ] = {0};
+	SpecialKeyHandler map[F12_KEY + 1] = {0};
 	clearKeyFnMapNonKernel(map);
 	
 	int32_t aux = fnPtr();
