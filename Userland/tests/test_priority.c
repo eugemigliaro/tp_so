@@ -3,6 +3,7 @@
 
 #include <sys.h>
 #include <test.h>
+#include "test_util.h"
 
 #define TOTAL_PROCESSES 3
 
@@ -18,30 +19,6 @@ static uint64_t max_value = 0;
 
 static char zero_to_max_name[] = "zero_to_max";
 static char *zero_to_max_argv[] = { zero_to_max_name, NULL };
-
-static int64_t satoi(const char *str) {
-    if (str == NULL || *str == '\0') {
-        return 0;
-    }
-
-    uint64_t i = 0;
-    int64_t res = 0;
-    int8_t sign = 1;
-
-    if (str[i] == '-') {
-        sign = -1;
-        i++;
-    }
-
-    for (; str[i] != '\0'; ++i) {
-        if (str[i] < '0' || str[i] > '9') {
-            return 0;
-        }
-        res = res * 10 + (str[i] - '0');
-    }
-
-    return res * sign;
-}
 
 static void zero_to_max(int argc, char **argv) {
     (void)argc;

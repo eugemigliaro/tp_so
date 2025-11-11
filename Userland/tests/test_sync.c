@@ -3,6 +3,7 @@
 
 #include <test.h>
 #include <sys.h>
+#include "test_util.h"
 
 #define TOTAL_PAIR_PROCESSES 2
 #define PROCESS_PRIORITY_DEFAULT 2
@@ -10,30 +11,6 @@
 
 static int64_t shared_value = 0;
 static void *sync_sem = NULL;
-
-static int64_t parse_signed(const char *str) {
-    if (str == NULL || *str == '\0') {
-        return 0;
-    }
-
-    int64_t result = 0;
-    int8_t sign = 1;
-    uint64_t i = 0;
-
-    if (str[i] == '-') {
-        sign = -1;
-        i++;
-    }
-
-    for (; str[i] != '\0'; i++) {
-        if (str[i] < '0' || str[i] > '9') {
-            return 0;
-        }
-        result = result * 10 + (str[i] - '0');
-    }
-
-    return result * sign;
-}
 
 static void slow_increment(int64_t *value, int64_t delta) {
     int64_t tmp = *value;
@@ -47,9 +24,9 @@ static void process_inc(int argc, char **argv) {
         processExit(-1);
     }
 
-    int64_t iterations = parse_signed(argv[0]);
-    int64_t delta = parse_signed(argv[1]);
-    int64_t use_sem = parse_signed(argv[2]);
+    int64_t iterations = satoi(argv[0]);
+    int64_t delta = satoi(argv[1]);
+    int64_t use_sem = satoi(argv[2]);
 
     if (iterations <= 0 || delta == 0 || use_sem < 0) {
         processExit(-1);
@@ -133,7 +110,7 @@ uint64_t test_sync(uint64_t argc, char *argv[]) {
         return (uint64_t)-1;
     }
 
-    int64_t iterations = parse_signed(argv[0]);
+    int64_t iterations = satoi(argv[0]);
     if (iterations <= 0) {
         printf("test_sync: iterations must be positive\n");
         return (uint64_t)-1;
@@ -158,7 +135,7 @@ uint64_t test_nosync(uint64_t argc, char *argv[]) {
         return (uint64_t)-1;
     }
 
-    int64_t iterations = parse_signed(argv[0]);
+    int64_t iterations = satoi(argv[0]);
     if (iterations <= 0) {
         printf("test_nosync: iterations must be positive\n");
         return (uint64_t)-1;
