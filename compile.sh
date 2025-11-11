@@ -1,6 +1,7 @@
 # Validates the existance of the TPE-ARQ container, starts it up & compiles the project
 CONTAINER_NAME="TPE-ARQ-g08-64018-64288-64646"
 MEMORY_MANAGER=${1:-buddy}
+EXTRA_WARNINGS="-Wall"
 
 # COLORS
 RED='\033[0;31m'
@@ -38,8 +39,8 @@ HOST_UID=$(id -u)
 HOST_GID=$(id -g)
 
 docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make clean -C /root/ && \
-docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make all -C /root/Toolchain && \
-docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make all -C /root/ MEMORY_MANAGER="$MEMORY_MANAGER"
+docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make all -C /root/Toolchain EXTRA_WARNINGS="$EXTRA_WARNINGS" && \
+docker exec -u "$HOST_UID:$HOST_GID" -it "$CONTAINER_NAME" make all -C /root/ MEMORY_MANAGER="$MEMORY_MANAGER" EXTRA_WARNINGS="$EXTRA_WARNINGS"
 
 
 if [ $? -ne 0 ]; then
