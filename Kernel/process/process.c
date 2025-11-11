@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <process.h>
 #include <memoryManager.h>
 #include <strings.h>
@@ -359,7 +361,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     process->fd_targets[STDOUT] = stdout_target;
     process->fd_targets[STDERR] = stderr_target;
 
-    size_t argv_count = (size_t)(process->argc + 1);
+    size_t argv_count = (size_t)process->argc + 1u;
     process->argv = (char **)mem_alloc(sizeof(char *) * argv_count);
     if (process->argv == NULL) {
         process_free_memory(process);
@@ -402,9 +404,11 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     }
 
     char sem_name[16] = "process";
-    sem_name[7] = '0' + (char)((pid / 100) % 10);
-    sem_name[8] = '0' + (char)((pid / 10) % 10);
-    sem_name[9] = '0' + (char)(pid % 10);
+    uint32_t pid_digits = pid;
+    for (int idx = 9; idx >= 7; idx--) {
+        sem_name[idx] = '0' + (char)(pid_digits % 10);
+        pid_digits /= 10;
+    }
     sem_name[10] = '\0';
 
     sem_init(process->exit_sem, sem_name, 0);
@@ -738,31 +742,41 @@ int32_t process_wait_pid(uint32_t pid) {
 }
 
 int32_t process_wait_children(void) {
-
     process_t *current = scheduler_current();
 
-    if(current == NULL) {
+    if (current == NULL) {
         return -1;
     }
 
-    if(current->children == NULL || queue_is_empty(current->children)) {
+    if (current->children == NULL || queue_is_empty(current->children)) {
         return 0;
     }
-    process_t *child = (process_t *)queue_pop(current->children);
-    while (child != NULL) {
+
+    size_t children = queue_size(current->children);
+    int32_t reaped = 0;
+
+    for (size_t i = 0; i < children; i++) {
+        process_t *child = (process_t *)queue_pop(current->children);
+        if (child == NULL) {
+            continue;
+        }
 
         if (!is_child(current, child)) {
-            return -1;
+            queue_push(current->children, child);
+            continue;
         }
 
-        if (reap_child_process(child) != 0) {
-            return -1;
+        if (child->state != PROCESS_STATE_TERMINATED) {
+            queue_push(current->children, child);
+            continue;
         }
 
-        child = (process_t *)queue_pop(current->children);
+        if (reap_child_process(child) == 0) {
+            reaped++;
+        }
     }
 
-    return 0;
+    return reaped;
 }
 
 void add_child(process_t *parent, process_t *child) {

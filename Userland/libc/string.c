@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -43,7 +45,7 @@ void strcpy(char * dest, char * src) {
 
 void strncpy(char * dest, char * src, int n) {
     int i = 0;
-    while (src[i] != 0 && i < n) {
+    while (i < n && src[i] != 0) {
         dest[i] = src[i];
         i++;
     }

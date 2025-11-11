@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <stddef.h>
 #include <scheduler.h>
 #include <stdbool.h>
@@ -23,9 +25,7 @@ static void idle_process_entry(void) {
 }
 
 static size_t priority_index(uint8_t priority) {
-    if (priority < SCHEDULER_MAX_PRIORITY) {
-        priority = SCHEDULER_MAX_PRIORITY;
-    } else if (priority > SCHEDULER_MIN_PRIORITY) {
+    if (priority > SCHEDULER_MIN_PRIORITY) {
         priority = SCHEDULER_MIN_PRIORITY;
     }
     return priority - SCHEDULER_MAX_PRIORITY;

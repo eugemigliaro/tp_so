@@ -1,3 +1,5 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <pipes.h>
 #include <sem.h>
 #include <string.h>
@@ -143,11 +145,8 @@ int read_pipe(uint8_t id, uint8_t * buffer, uint64_t bytes) {
 			sem_wait(pipe->can_read);
 			sem_wait(pipe->mutex);
 			pipe->waiting_readers--;
-
-			if (pipe->data_count == 0) {
-				sem_post(pipe->mutex);
-				continue;
-			}
+			sem_post(pipe->mutex);
+			continue;
 		}
 
 		buffer[read_bytes] = pipe->buffer[pipe->read_idx];
@@ -188,11 +187,8 @@ int write_pipe(uint8_t id, const uint8_t * buffer, uint64_t bytes) {
 			sem_wait(pipe->can_write);
 			sem_wait(pipe->mutex);
 			pipe->waiting_writers--;
-
-			if (pipe->data_count == PIPE_BUFFER_SIZE) {
-				sem_post(pipe->mutex);
-				continue;
-			}
+			sem_post(pipe->mutex);
+			continue;
 		}
 
 		pipe->buffer[pipe->write_idx] = buffer[written_bytes];
