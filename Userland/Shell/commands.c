@@ -401,10 +401,14 @@ static void mvar_writer(int argc, char **argv) {
     }
 
     while(1) {
-        uint32_t active_wait = (rand() % 999999) + 99999999;
+        /* uint32_t active_wait = (rand() % 9999999999) + 99999999;
         while(active_wait > 0) {
             active_wait--;
-        }
+        } */
+
+        uint32_t sleep_time = (rand() % 3000) + 1000;
+        sleep(sleep_time);
+
         semWait(empty_sem);
         mvar_var[0] = id[0];
         semPost(full_sem);
@@ -425,10 +429,13 @@ static void mvar_reader(int argc, char **argv) {
     }
 
     while (1) {
-        uint32_t active_wait = (rand() % 999999) + 99999999;
+        /* uint32_t active_wait = (rand() % 9999999999) + 99999999;
         while(active_wait > 0) {
             active_wait--;
-        }
+        } */
+
+        uint32_t sleep_time = (rand() % 3000) + 1000;
+        sleep(sleep_time);
         
         semWait(full_sem);
         char value = mvar_var[0];

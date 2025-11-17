@@ -1,0 +1,42 @@
+pvs-studio.com/en/docs/warnings/	1	err	Help: The documentation for all analyzer warnings is available here: https://pvs-studio.com/en/docs/warnings/.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	552	err	V595 The 'disk' pointer was utilized before it was verified against nullptr. Check lines: 552, 575.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	638	warn	V1032 The pointer 'dir_copy' is cast to a more strictly aligned pointer type.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	694	warn	V1032 The pointer 'Directory' is cast to a more strictly aligned pointer type.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	452	note	V575 The potential null pointer is passed into 'memset' function. Inspect the first argument.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	482	note	V575 The potential null pointer is passed into 'rewind' function. Inspect the first argument.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	238	note	V576 Incorrect format. Consider checking the third actual argument of the 'printf' function. The SIGNED integer type argument is expected.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	254	note	V576 Incorrect format. Consider checking the fourth actual argument of the 'printf' function. The SIGNED integer type argument is expected.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	254	note	V576 Incorrect format. Consider checking the third actual argument of the 'printf' function. The SIGNED integer type argument is expected.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	408	note	V576 Incorrect format. Consider checking the second actual argument of the 'printf' function. Under certain conditions the pointer can be null.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	689	note	V576 Incorrect format. Consider checking the second actual argument of the 'printf' function. The SIGNED integer type argument is expected.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	369	note	V584 The 'diskSize' value is present on both sides of the '>' operator. The expression is incorrect or it can be simplified.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	461	note	V658 A value is being subtracted from the unsigned variable. This can result in an overflow. In such a case, the '>' comparison operation can potentially behave unexpectedly. Consider inspecting the 'chunkSize > diskSize - writeSize' expression.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Bootloader/BMFS/bmfs.c	501	note	V1004 The 'mbr' pointer was used unsafely after it was verified against nullptr. Check lines: 392, 501.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/drivers/keyboard.c	149	warn	V728 An excessive check can be simplified. The '||' operator is surrounded by opposite expressions 'registeredFromKernel != 0' and 'registeredFromKernel == 0'. 
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/drivers/keyboard.c	14	note	V1003 The macro 'IS_KEYCODE' is a dangerous expression. The parameter 'c' must be surrounded by parentheses.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/fonts.c	76	warn	V547 Expression 'ascii < 128' is always true. The value range of char type: [-128, 127].
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/fonts.c	51	warn	V1009 Check the array initialization. Only the first element is initialized explicitly. The rest elements are initialized with zeros.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/idt/exceptionDispatcher.c	101	note	V776 Potentially infinite loop.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/kernel.c	26	note	V566 The integer constant is converted to pointer. Possibly an error or a bad coding style: (void *) 0x400000
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/process.c	305	warn	V1004 The 'current' pointer was used unsafely after it was verified against nullptr. Check lines: 301, 305.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/process.c	312	note	V776 Potentially infinite loop.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/scheduler.c	91	note	V560 A part of conditional expression is always false: process->priority < 0. Unsigned type value is never < 0.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/scheduler.c	272	note	V560 A part of conditional expression is always false: priority < 0. Unsigned type value is never < 0.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/scheduler.c	324	note	V560 A part of conditional expression is always false: process->priority < 0. Unsigned type value is never < 0.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/scheduler.c	193	note	V1048 The 'must_switch' variable was assigned the same value.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Kernel/process/scheduler.c	202	note	V1048 The 'must_switch' variable was assigned the same value.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/Shell/commands.c	106	note	V576 Incorrect format. Consider checking the third actual argument of the 'printf' function. The integer argument of 32-bit size is expected.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/Shell/commands.c	403	note	V776 Potentially infinite loop.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/Shell/commands.c	427	note	V776 Potentially infinite loop.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/Shell/shell.c	302	note	V1048 The 'command_token[0]' variable was assigned the same value.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/include/libc/ctype.h	4	note	V1059 The 'tolower' macro name overrides a reserved name from C standard. This may lead to undefined behavior.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/include/libc/ctype.h	5	note	V1059 The 'toupper' macro name overrides a reserved name from C standard. This may lead to undefined behavior.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/include/libc/ctype.h	6	note	V1059 The 'isspace' macro name overrides a reserved name from C standard. This may lead to undefined behavior.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/libc/stdio.c	17	warn	V618 It's dangerous to call the 'printf' function in such a manner, as the line being passed could contain format specification. The example of the safe code: printf("%s", str);
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/libc/stdio.c	47	warn	V618 It's dangerous to call the 'fprintf' function in such a manner, as the line being passed could contain format specification. The example of the safe code: printf("%s", str);
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/libc/stdio.c	193	warn	V618 It's dangerous to call the 'fprintf' function in such a manner, as the line being passed could contain format specification. The example of the safe code: printf("%s", str);
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/libc/stdio.c	244	warn	V618 It's dangerous to call the 'fprintf' function in such a manner, as the line being passed could contain format specification. The example of the safe code: printf("%s", str);
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/libsys/ansiColors.c	47	note	V796 It is possible that 'break' statement is missing in switch statement.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/tests/test_mm.c	47	warn	V547 Expression 'remaining < 1U' is always false.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/tests/test_processes.c	180	note	V576 Incorrect format. Consider checking the second actual argument of the 'printf' function. The integer argument of 32-bit size is expected.
+/home/eugemigliaro/Documents/facultad/tercero/SO/tp_so/Userland/tests/test_sync.c	29	warn	V1004 The 'argv' pointer was used unsafely after it was verified against nullptr. Check lines: 25, 29.

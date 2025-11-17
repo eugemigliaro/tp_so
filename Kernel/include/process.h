@@ -63,7 +63,7 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
 int32_t add_first_process(void);
 int32_t print_process_list(void);   
 
-void add_child(process_t *parent, process_t *child);
+bool add_child(process_t *parent, process_t *child);
 
 int get_foreground_process_pid(void);
 int give_foreground_to(uint32_t target_pid);

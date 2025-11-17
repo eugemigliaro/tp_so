@@ -465,7 +465,20 @@ process_t *createProcess(int argc, char **argv, uint32_t ppid, uint8_t priority,
     }
 
     if (parent != NULL) {
-        add_child(parent, process);
+        if (!add_child(parent, process)) {
+            process_unregister(process->pid);
+            if (stderr_attached) {
+                unattach_from_pipe(stderr_target, (int)process->pid);
+            }
+            if (stdout_attached) {
+                unattach_from_pipe(stdout_target, (int)process->pid);
+            }
+            if (stdin_attached) {
+                unattach_from_pipe(stdin_target, (int)process->pid);
+            }
+            process_free_memory(process);
+            return NULL;
+        }
     }
 
     if (foreground && pcb != NULL) {
@@ -752,25 +765,31 @@ int32_t process_wait_children(void) {
         return 0;
     }
 
-    size_t children = queue_size(current->children);
-    int32_t reaped = 0;
+    process_t *terminated[PROCESS_MAX_CHILDREN];
+    size_t terminated_count = 0;
 
-    for (size_t i = 0; i < children; i++) {
-        process_t *child = (process_t *)queue_pop(current->children);
-        if (child == NULL) {
-            continue;
-        }
-
-        if (!is_child(current, child)) {
-            queue_push(current->children, child);
+    queue_iterator_t iterator = queue_iter(current->children);
+    while (queue_iter_has_next(&iterator)) {
+        process_t *child = (process_t *)queue_iter_next(&iterator);
+        if (child == NULL || !is_child(current, child)) {
             continue;
         }
 
         if (child->state != PROCESS_STATE_TERMINATED) {
-            queue_push(current->children, child);
             continue;
         }
 
+        if (terminated_count < PROCESS_MAX_CHILDREN) {
+            terminated[terminated_count++] = child;
+        }
+    }
+
+    int32_t reaped = 0;
+    for (size_t i = 0; i < terminated_count; i++) {
+        process_t *child = terminated[i];
+        if (!queue_remove(current->children, child)) {
+            continue;
+        }
         if (reap_child_process(child) == 0) {
             reaped++;
         }
@@ -779,19 +798,19 @@ int32_t process_wait_children(void) {
     return reaped;
 }
 
-void add_child(process_t *parent, process_t *child) {
-    if(parent == NULL || child == NULL) {
-        return;
+bool add_child(process_t *parent, process_t *child) {
+    if (parent == NULL || child == NULL) {
+        return false;
     }
 
-    if(parent->children == NULL){
+    if (parent->children == NULL) {
         parent->children = queue_create();
-    }
-    if(parent->children == NULL){
-        return;
+        if (parent->children == NULL) {
+            return false;
+        }
     }
 
-    queue_push(parent->children, (void *)child);
+    return queue_push(parent->children, (void *)child);
 }
 
 int give_foreground_to(uint32_t target_pid) {
