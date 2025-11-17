@@ -210,25 +210,29 @@ int loop(int argc, char *argv[]) {
 
 int kill(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Usage: kill <pid>\n");
+        printf("Usage: kill <pid> [<pid> ...]\n");
         return 1;
     }
     
-    int pid = atoi(argv[1]);
-    if (pid <= 0) {
-        printf("Error: PID must be a positive integer\n");
-        return 1;
-    }
+    int status = 0;
     
-    int32_t result = processKill((uint64_t)pid);
-    
-    if (result < 0) {
-        printf("Error: Could not kill process %d\n", pid);
-        return 1;
-    }
-    
-    printf("Process %d killed successfully\n", pid);
-    return 0;
+    for (int i = 1; i < argc; i++) {
+        int pid = atoi(argv[i]);
+        if (pid <= 0) {
+            printf("Error: PID must be a positive integer (got \"%s\")\n", argv[i]);
+            status = 1;
+        } else {
+            int32_t result = processKill((uint64_t)pid);
+        
+            if (result < 0) {
+                printf("Error: Could not kill process %d\n", pid);
+                status = 1;
+            } else {
+                printf("Process %d killed successfully\n", pid);
+            }
+        }
+    }    
+    return status;
 }
 
 int nice(int argc, char *argv[]) {
